@@ -54,7 +54,7 @@ function System(constraints, masses, positions, velocities) {
   this.velocities = velocities;
 }
 
-export function simulate(particles, constraints, ctx) {
+export function simulate(particles, constraints, timestep, duration) {
   let masses = [];
   let positions = [];
   let sys_constraints = [];
@@ -79,14 +79,14 @@ export function simulate(particles, constraints, ctx) {
     math.zeros(positions.length),
   );
   let y_0 = math.concat(system.positions, system.velocities);
-  let trajectory = rk4(system, y_0, 50, 1);
+  let trajectory = rk4(system, y_0, timestep, duration);
   return trajectory;
 }
 
-function rk4(system, y_0, tfinal, steps) {
+function rk4(system, y_0, timestep, tfinal) {
   var y = y_0;
   var t = 0;
-  var h = 1 / steps;
+  var h = timestep;
   var output = [];
   var terminate = false;
   while (t < tfinal && !terminate) {

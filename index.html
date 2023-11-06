@@ -82,7 +82,15 @@
         </select>
 
         <button>Play</button>
-        Timestep<input type="text" />Duration<input type="text" />
+        Timestep<input
+          id="timestep"
+          type="text"
+          oninput="data.timestep=+this.value;drawMechanism()"
+        />Duration<input
+          type="text"
+          oninput="data.duration=+this.value;drawMechanism()"
+          id="duration"
+        />
       </div>
       <div id="allcontrols">
         <div id="particlesControl">
@@ -105,6 +113,8 @@
       const canvas = document.getElementById("mechanism");
       const ctx = canvas.getContext("2d");
       window.data = {
+        duration: 50,
+        timestep: 1,
         particles: [{ x: 100, y: 100, mass: 1, hovered: false }],
         constraints: { rod: [], slider: [] },
       };
@@ -116,28 +126,31 @@
           data.particles.length > 1 &&
           data.constraints.rod.length + data.constraints.slider.length > 1
         ) {
-          try {
-            const trajectories = simulate(data.particles, data.constraints);
+          const trajectories = simulate(
+            data.particles,
+            data.constraints,
+            data.timestep,
+            data.duration,
+          );
 
-            // Draw the trajectories for the rod constraints
-            trajectories.forEach((trajectory) => {
-              trajectory = trajectory._data;
-              for (let i = 0; i < data.constraints.rod.length; i++) {
-                const rod = data.constraints.rod[i];
-                const p1Index = rod.p1 * 2; // Index in trajectory array for p1.x and p1.y
-                const p2Index = rod.p2 * 2; // Index in trajectory array for p2.x and p2.y
+          // Draw the trajectories for the rod constraints
+          trajectories.forEach((trajectory) => {
+            trajectory = trajectory._data;
+            for (let i = 0; i < data.constraints.rod.length; i++) {
+              const rod = data.constraints.rod[i];
+              const p1Index = rod.p1 * 2; // Index in trajectory array for p1.x and p1.y
+              const p2Index = rod.p2 * 2; // Index in trajectory array for p2.x and p2.y
 
-                // Draw the line for the rod's trajectory
-                ctx.beginPath();
-                ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
-                ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
-                ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
-                ctx.stroke();
-              }
-            });
+              // Draw the line for the rod's trajectory
+              ctx.beginPath();
+              ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
+              ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
+              ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
+              ctx.stroke();
+            }
+          });
 
-            ctx.strokeStyle = "black";
-          } catch {}
+          ctx.strokeStyle = "black";
         }
 
         // Draw particles
@@ -278,6 +291,8 @@
       function updateUI() {
         // Clear the canvas and redraw the mechanism
         drawMechanism();
+        document.getElementById("timestep").value = data.timestep;
+        document.getElementById("duration").value = data.duration;
 
         // Update Particle Controls UI
         const particlesControl = document.getElementById("particlesControl");
@@ -535,11 +550,11 @@
       };
       presets = {
         "Hinged Counterweight":
-          '{"particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":346,"y":657.6332053503577,"mass":4,"hovered":false},{"x":588,"y":440.75416954332485,"mass":10,"hovered":false},{"x":668,"y":673.6242863315215,"mass":1,"hovered":false},{"x":586,"y":533.7023277463389,"mass":100,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":0,"normal":{"x":0.6,"y":1},"hovered":false}]}}',
+          '{"timestep":0.3, "duration":35, "particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":346,"y":657.6332053503577,"mass":4,"hovered":false},{"x":588,"y":440.75416954332485,"mass":10,"hovered":false},{"x":668,"y":673.6242863315215,"mass":1,"hovered":false},{"x":586,"y":533.7023277463389,"mass":100,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":0,"normal":{"x":0.6,"y":1},"hovered":false}]}}',
         "Fixed Counterweight":
-          '{"particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":346,"y":657.6332053503577,"mass":4,"hovered":false},{"x":589,"y":444.719739113931,"mass":100,"hovered":false},{"x":668,"y":673.6242863315215,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":0,"normal":{"x":0.6,"y":1},"hovered":false}]}}',
+          '{"timestep":0.3, "duration":35, "particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":346,"y":657.6332053503577,"mass":4,"hovered":false},{"x":589,"y":444.719739113931,"mass":100,"hovered":false},{"x":668,"y":673.6242863315215,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":0,"normal":{"x":0.6,"y":1},"hovered":false}]}}',
         "Floating Arm Trebuchet":
-          '{"particles":[{"x":487.0140918429353,"y":517.0092960532231,"mass":1,"hovered":false},{"x":346,"y":657.6332053503577,"mass":4,"hovered":false},{"x":589,"y":444.719739113931,"mass":100,"hovered":false},{"x":668,"y":673.6242863315215,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":2,"normal":{"x":0.6,"y":0},"hovered":false}]}}',
+          '{"timestep":0.3, "duration":35, "particles":[{"x":487.0140918429353,"y":517.0092960532231,"mass":1,"hovered":false},{"x":346,"y":657.6332053503577,"mass":4,"hovered":false},{"x":589,"y":444.719739113931,"mass":100,"hovered":false},{"x":668,"y":673.6242863315215,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":2,"normal":{"x":0.6,"y":0},"hovered":false}]}}',
       };
     </script>
   </body>
