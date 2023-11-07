@@ -172,33 +172,41 @@
           data.timestep > 0 &&
           typeof data.timestep === "number"
         ) {
-          const trajectories = simulate(
-            data.particles,
-            data.constraints,
-            data.timestep,
-            data.duration,
-          );
+          try {
+            const trajectories = simulate(
+              data.particles,
+              data.constraints,
+              data.timestep,
+              data.duration,
+            );
 
-          // Draw the trajectories for the rod constraints
-          trajectories.forEach((trajectory) => {
-            trajectory = trajectory._data;
-            for (let i = 0; i < data.constraints.rod.length; i++) {
-              if (!(data.constraints.rod[i].oneway == true)) {
-                const rod = data.constraints.rod[i];
-                const p1Index = rod.p1 * 2; // Index in trajectory array for p1.x and p1.y
-                const p2Index = rod.p2 * 2; // Index in trajectory array for p2.x and p2.y
+            // Draw the trajectories for the rod constraints
+            trajectories.forEach((trajectory) => {
+              trajectory = trajectory._data;
+              for (let i = 0; i < data.constraints.rod.length; i++) {
+                if (!(data.constraints.rod[i].oneway == true)) {
+                  const rod = data.constraints.rod[i];
+                  const p1Index = rod.p1 * 2; // Index in trajectory array for p1.x and p1.y
+                  const p2Index = rod.p2 * 2; // Index in trajectory array for p2.x and p2.y
 
-                // Draw the line for the rod's trajectory
-                ctx.beginPath();
-                ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
-                ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
-                ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
-                ctx.stroke();
+                  // Draw the line for the rod's trajectory
+                  ctx.beginPath();
+                  ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
+                  ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
+                  ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
+                  ctx.stroke();
+                }
               }
-            }
-          });
+            });
 
-          ctx.strokeStyle = "black";
+            ctx.strokeStyle = "black";
+          } catch {
+            ctx.fillText(
+              "Inconsistent Constraints (Duplicate Sliders?)",
+              300,
+              100,
+            );
+          }
         }
 
         // Draw particles
