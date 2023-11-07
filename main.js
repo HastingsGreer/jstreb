@@ -20,14 +20,10 @@ function pset(array, v, n) {
 }
 
 // Since we do not have types like in Julia, we will use simple objects in JavaScript
-function Rod(p1, p2) {
+function Rod(p1, p2, oneway) {
   this.p1 = p1;
   this.p2 = p2;
-}
-
-function Prop(p1, p2) {
-  this.p1 = p1;
-  this.p2 = p2;
+  this.oneway = oneway;
 }
 
 function Rope(p1, p2, p3) {
@@ -36,14 +32,10 @@ function Rope(p1, p2, p3) {
   this.p3 = p3;
 }
 
-function Slider(p, n) {
+function Slider(p, n, oneway) {
   this.p = p;
   this.n = normalize(n);
-}
-
-function Shelf(p, n) {
-  this.p = p;
-  this.n = normalize(n);
+  this.oneway = oneway;
 }
 
 function System(constraints, masses, positions, velocities) {
@@ -64,11 +56,11 @@ export function simulate(particles, constraints, timestep, duration) {
     positions.push(particle.y);
   }
   for (var rod of constraints.rod) {
-    sys_constraints.push(new Rod(rod.p1, rod.p2));
+    sys_constraints.push(new Rod(rod.p1, rod.p2, rod.oneway));
   }
   for (var slider of constraints.slider) {
     sys_constraints.push(
-      new Slider(slider.p, [slider.normal.x, slider.normal.y]),
+      new Slider(slider.p, [slider.normal.x, slider.normal.y], slider.oneway),
     );
   }
 
@@ -138,6 +130,12 @@ function dvdt(system) {
     ),
     system.forces,
   );
+  for (var i = 0; i < constraint_forces.length; i++) {
+    if (constraint_forces[i] > 0 && system.constraints[i].oneway === true) {
+      system.constraints.splice(i, 1);
+      break;
+    }
+  }
   return [acc, false];
 }
 function dydt(system, y) {
