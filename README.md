@@ -3,4 +3,4 @@ yarn
 npx vite
 ```
 
-[live](hastingsgreer.github.io/jstreb)
+[live](https://hastingsgreer.github.io/jstreb)
