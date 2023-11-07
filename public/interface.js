@@ -72,7 +72,7 @@ function drawMechanism() {
     data.timestep > 0 &&
     typeof data.timestep === "number"
   ) {
-    //try {
+    try {
       document.getElementById("range").innerText = "";
       const trajectories = simulate(
         data.particles,
@@ -106,26 +106,31 @@ function drawMechanism() {
       var range = 0;
       for (var trajectory of trajectories) {
         trajectory = trajectory._data;
-        for (var part_index = 0; part_index < data.particles.length; part_index++) {
+        for (
+          var part_index = 0;
+          part_index < data.particles.length;
+          part_index++
+        ) {
           mincoord = Math.min(mincoord, -trajectory[2 * part_index + 1]);
         }
 
         range = Math.max(
           range,
-          2 * Math.max(
-            0,
-            -trajectory[2 * data.particles.length + 2 * data.projectile + 1]) *
-              trajectory[2 * data.particles.length + 2 * data.projectile],
-          
+          2 *
+            Math.max(
+              0,
+              -trajectory[2 * data.particles.length + 2 * data.projectile + 1],
+            ) *
+            trajectory[2 * data.particles.length + 2 * data.projectile],
         );
-
       }
-	  console.log(range);
-	  console.log(axlecoord - mincoord);
-	  document.getElementById("range").innerText = range / (axlecoord - mincoord) * data.axleheight;
-    //} catch {
-    //  ctx.fillText("Inconsistent Constraints (Duplicate Sliders?)", 300, 100);
-    //}
+      console.log(range);
+      console.log(axlecoord - mincoord);
+      document.getElementById("range").innerText =
+        (range / (axlecoord - mincoord)) * data.axleheight;
+    } catch {
+      ctx.fillText("Inconsistent Constraints (Duplicate Sliders?)", 300, 100);
+    }
   }
 
   // Draw particles
@@ -302,9 +307,9 @@ function updateUI() {
   }
   for (var name of ["armtip", "projectile", "mainaxle"]) {
     var selectbox = document.getElementById(name);
-  while (selectbox.children.length > 0) {
-    selectbox.removeChild(selectbox.lastChild);
-  }
+    while (selectbox.children.length > 0) {
+      selectbox.removeChild(selectbox.lastChild);
+    }
     for (var i = 0; i < data.particles.length; i++) {
       const poption = document.createElement("option");
       poption.selected = data[name] == i;
