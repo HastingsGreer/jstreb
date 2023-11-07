@@ -391,11 +391,11 @@
         const box = document.createElement("div");
         box.className = "control-box";
         box.innerHTML = `
-          <label>Mass: <input type="text" min="1" max="500" value="${data.particles[index].mass}" oninput="updateParticle(${index}, 'mass', this.value)"></label>
-          <label>X: <input type="text" min="0" max="${canvas.width}" value="${data.particles[index].x}" oninput="updateParticle(${index}, 'x', this.value)"></label>
-          <label>Y: <input type="text" min="0" max="${canvas.height}" value="${data.particles[index].y}" oninput="updateParticle(${index}, 'y', this.value)"></label>
-          <button onclick="deleteParticle(${index})">X</button>
-        `;
+                <label>Mass: <input type="text" min="1" max="500" value="${data.particles[index].mass}" oninput="updateParticle(${index}, 'mass', this.value)"></label>
+                <label>X: <input type="text" min="0" max="${canvas.width}" value="${data.particles[index].x}" oninput="updateParticle(${index}, 'x', this.value)"></label>
+                <label>Y: <input type="text" min="0" max="${canvas.height}" value="${data.particles[index].y}" oninput="updateParticle(${index}, 'y', this.value)"></label>
+                <button onclick="deleteParticle(${index})">X</button>
+              `;
         box.addEventListener("mouseenter", () => {
           data.particles[index].hovered = true;
           drawMechanism();
@@ -430,70 +430,70 @@
 
         if (type === "rod") {
           box.innerHTML = `Rod
-              <select name="p1" onchange="updateConstraint(this, 'rod', ${index}, 'p1')">
-      	   ${data.particles
-             .map((_, i) => i)
-             .filter(
-               (i) =>
-                 !constraintExists(data.constraints.rod[index].p2, i) ||
-                 i == data.constraints.rod[index].p1,
-             )
-             .map(
-               (i) =>
-                 `<option value="${i}" ${
-                   i === data.constraints.rod[index].p1 ? "selected" : ""
-                 }>P ${i + 1}</option>`,
-             )
-             .join("")}
-              </select>
-              <select name="p2" onchange="updateConstraint(this, 'rod', ${index}, 'p2')">
-      	   ${data.particles
-             .map((_, i) => i)
-             .filter(
-               (i) =>
-                 !constraintExists(data.constraints.rod[index].p1, i) ||
-                 i == data.constraints.rod[index].p2,
-             )
-             .map(
-               (i) =>
-                 `<option value="${i}" ${
-                   i === data.constraints.rod[index].p2 ? "selected" : ""
-                 }>P ${i + 1}</option>`,
-             )
-             .join("")}
-              </select>
-            <button onclick="deleteConstraint('rod', ${index})">Delete</button>
-      			<input type="checkbox" oninput="data.constraints.rod[${index}].oneway=this.checked;updateUI()" ${
-              data.constraints.rod[index].oneway ? "checked" : ""
-            }></input>
-          `;
+                    <select name="p1" onchange="updateConstraint(this, 'rod', ${index}, 'p1')">
+            	   ${data.particles
+                   .map((_, i) => i)
+                   .filter(
+                     (i) =>
+                       !constraintExists(data.constraints.rod[index].p2, i) ||
+                       i == data.constraints.rod[index].p1,
+                   )
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === data.constraints.rod[index].p1 ? "selected" : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+                    <select name="p2" onchange="updateConstraint(this, 'rod', ${index}, 'p2')">
+            	   ${data.particles
+                   .map((_, i) => i)
+                   .filter(
+                     (i) =>
+                       !constraintExists(data.constraints.rod[index].p1, i) ||
+                       i == data.constraints.rod[index].p2,
+                   )
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === data.constraints.rod[index].p2 ? "selected" : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+                  <button onclick="deleteConstraint('rod', ${index})">Delete</button>
+            			<input type="checkbox" oninput="data.constraints.rod[${index}].oneway=this.checked;updateUI()" ${
+                    data.constraints.rod[index].oneway ? "checked" : ""
+                  }></input>
+                `;
         } else if (type === "slider") {
           const slider = data.constraints.slider[index];
           box.innerHTML = `
-            <label>
-      		Slider
-              <select name="p" onchange="updateConstraint(this, 'slider', ${index}, 'p')">
-                ${data.particles
-                  .map(
-                    (_, i) =>
-                      `<option value="${i}" ${
-                        i === slider.p ? "selected" : ""
-                      }>P ${i + 1}</option>`,
-                  )
-                  .join("")}
-              </select>
-            </label>
-            <label>Normal X: <input type="range" name="normalX" min="-1" max="1" step="0.1" value="${
-              slider.normal.x
-            }" oninput="updateConstraint(this, 'slider', ${index}, 'normalX')"></label>
-            <label>Normal Y: <input type="range" name="normalY" min="-1" max="1" step="0.1" value="${
-              slider.normal.y
-            }" oninput="updateConstraint(this, 'slider', ${index}, 'normalY')"></label>
-            <button onclick="deleteConstraint('slider', ${index})">Delete</button>
-      			<input type="checkbox" oninput="data.constraints.slider[${index}].oneway=this.checked;updateUI()" ${
-              data.constraints.slider[index].oneway ? "checked" : ""
-            }></input>
-          `;
+                  <label>
+            		Slider
+                    <select name="p" onchange="updateConstraint(this, 'slider', ${index}, 'p')">
+                      ${data.particles
+                        .map(
+                          (_, i) =>
+                            `<option value="${i}" ${
+                              i === slider.p ? "selected" : ""
+                            }>P ${i + 1}</option>`,
+                        )
+                        .join("")}
+                    </select>
+                  </label>
+                  <label>Normal X: <input type="range" name="normalX" min="-1" max="1" step="0.1" value="${
+                    slider.normal.x
+                  }" oninput="updateConstraint(this, 'slider', ${index}, 'normalX')"></label>
+                  <label>Normal Y: <input type="range" name="normalY" min="-1" max="1" step="0.1" value="${
+                    slider.normal.y
+                  }" oninput="updateConstraint(this, 'slider', ${index}, 'normalY')"></label>
+                  <button onclick="deleteConstraint('slider', ${index})">Delete</button>
+            			<input type="checkbox" oninput="data.constraints.slider[${index}].oneway=this.checked;updateUI()" ${
+                    data.constraints.slider[index].oneway ? "checked" : ""
+                  }></input>
+                `;
         }
 
         box.addEventListener("mouseenter", () => {
@@ -613,6 +613,9 @@
           '{"timestep":0.3,"duration":40,"particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":659,"y":451,"mass":4,"hovered":false},{"x":483,"y":498,"mass":10,"hovered":false},{"x":551,"y":434,"mass":1,"hovered":false},{"x":560,"y":368,"mass":200,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false},{"p1":0,"p2":3,"hovered":false,"oneway":true},{"p1":0,"p2":4,"hovered":false,"oneway":true}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":0,"normal":{"x":0.6,"y":0},"hovered":false}]}}',
         Fiffer:
           '{"timestep":0.2,"duration":20,"particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":484,"y":656,"mass":4,"hovered":false},{"x":504,"y":433,"mass":10,"hovered":false},{"x":644,"y":661,"mass":1,"hovered":false},{"x":653,"y":451,"mass":10,"hovered":false},{"x":749,"y":428,"mass":1,"hovered":false},{"x":749,"y":483,"mass":500,"hovered":false},{"x":566,"y":505,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false},{"p1":7,"p2":6,"hovered":false},{"p1":6,"p2":4,"hovered":false},{"p1":4,"p2":5,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":0,"normal":{"x":0.6,"y":1},"hovered":false},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true},{"p":7,"normal":{"x":0.7,"y":1},"hovered":false},{"p":7,"normal":{"x":0,"y":1},"hovered":false},{"p":5,"normal":{"x":0,"y":1},"hovered":false},{"p":5,"normal":{"x":0.7,"y":1},"hovered":false}]}}',
+
+        "Floating Arm King Arthur":
+          '{"timestep":0.2,"duration":40,"particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":527,"y":610,"mass":4,"hovered":false},{"x":534,"y":418,"mass":10,"hovered":false},{"x":698,"y":608,"mass":1,"hovered":false},{"x":560,"y":331,"mass":200,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":2,"normal":{"x":-0.5,"y":0},"hovered":false,"oneway":true},{"p":1,"normal":{"x":0.7,"y":0},"hovered":false,"oneway":true},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true}]}}',
       };
     </script>
   </body>
