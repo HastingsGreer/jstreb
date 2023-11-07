@@ -167,16 +167,16 @@
 
       function drawMechanism() {
         saveMechanism();
-ctx.save();
+        ctx.save();
 
-  // Reset the transform to the default state
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+        // Reset the transform to the default state
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-  // Clear the entire canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Clear the entire canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Restore the original state which contains our zoom and pan settings
-  ctx.restore();
+        // Restore the original state which contains our zoom and pan settings
+        ctx.restore();
         if (
           data.particles.length > 1 &&
           data.constraints.rod.length + data.constraints.slider.length > 1 &&
@@ -559,47 +559,46 @@ ctx.save();
           draggedParticleIndex = particleIndex;
           canvas.style.cursor = "move";
         } else {
-
-    isPanning = true;
-    startX = event.clientX - canvas.offsetLeft;
-    startY = event.clientY - canvas.offsetTop;
-}
+          //isPanning = true;
+          startX = event.clientX - canvas.offsetLeft;
+          startY = event.clientY - canvas.offsetTop;
+        }
       });
-let zoomLevel = 1;
-  const ZOOM_SENSITIVITY = 0.001;
+      let zoomLevel = 1;
+      const ZOOM_SENSITIVITY = 0.001;
 
-  canvas.addEventListener('wheel', function(event) {
-    event.preventDefault();
-    zoomLevel += event.deltaY * -ZOOM_SENSITIVITY;
-    zoomLevel = Math.min(Math.max(.125, zoomLevel), 4); // Clamp between 0.125x and 4x
-    ctx.setTransform(zoomLevel, 0, 0, zoomLevel, 0, 0);
-    drawMechanism(); // You will need to redraw the canvas content
-  });
+      canvas.addEventListener("wheel", function (event) {
+        event.preventDefault();
+        zoomLevel += event.deltaY * -ZOOM_SENSITIVITY;
+        zoomLevel = Math.min(Math.max(0.125, zoomLevel), 4); // Clamp between 0.125x and 4x
+        ctx.setTransform(zoomLevel, 0, 0, zoomLevel, 0, 0);
+        drawMechanism(); // You will need to redraw the canvas content
+      });
 
-  let isPanning = false;
-  let startX = 0, startY = 0;
+      let isPanning = false;
+      let startX = 0,
+        startY = 0;
 
+      canvas.addEventListener("mousemove", function (event) {
+        if (isPanning) {
+          const x = event.clientX - canvas.offsetLeft;
+          const y = event.clientY - canvas.offsetTop;
+          const dx = x - startX;
+          const dy = y - startY;
+          ctx.translate(dx, dy);
+          drawMechanism(); // Redraw the canvas content
+          startX = x;
+          startY = y;
+        }
+      });
 
-  canvas.addEventListener('mousemove', function(event) {
-    if (isPanning) {
-      const x = event.clientX - canvas.offsetLeft;
-      const y = event.clientY - canvas.offsetTop;
-      const dx = x - startX;
-      const dy = y - startY;
-      ctx.translate(dx, dy);
-      drawMechanism(); // Redraw the canvas content
-      startX = x;
-      startY = y;
-    }
-  });
+      canvas.addEventListener("mouseup", function (event) {
+        isPanning = false;
+      });
 
-  canvas.addEventListener('mouseup', function(event) {
-    isPanning = false;
-  });
-
-  canvas.addEventListener('mouseleave', function(event) {
-    isPanning = false;
-  });
+      canvas.addEventListener("mouseleave", function (event) {
+        isPanning = false;
+      });
       canvas.addEventListener("mousemove", function (event) {
         if (draggedParticleIndex !== null) {
           const rect = canvas.getBoundingClientRect();
