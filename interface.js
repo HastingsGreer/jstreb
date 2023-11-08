@@ -124,8 +124,6 @@ function drawMechanism() {
             trajectory[2 * data.particles.length + 2 * data.projectile],
         );
       }
-      console.log(range);
-      console.log(axlecoord - mincoord);
       document.getElementById("range").innerText =
         (range / (axlecoord - mincoord)) * data.axleheight;
     } catch {
@@ -567,6 +565,7 @@ window.addEventListener("resize", resizeCanvas);
 window.onload = () => {
   loadMechanism();
   resizeCanvas();
+  optimize();
 };
 presets = {
   "Hinged Counterweight":
@@ -585,3 +584,32 @@ presets = {
   "Floating Arm King Arthur":
     '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.2,"duration":40,"particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":527,"y":610,"mass":4,"hovered":false},{"x":534,"y":418,"mass":10,"hovered":false},{"x":698,"y":608,"mass":1,"hovered":false},{"x":560,"y":331,"mass":200,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":2,"normal":{"x":-0.5,"y":0},"hovered":false,"oneway":true},{"p":1,"normal":{"x":0.7,"y":0},"hovered":false,"oneway":true},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true}]}}',
 };
+let optimizing = false;
+async function optimize() {
+	if (optimizing) {
+		optimizing = false;
+		return;
+	}
+	optimizing = true;
+	wait();
+	console.log(document.getElementById("range").innerText);
+	while (optimizing) {
+		var oldrange = +document.getElementById("range").innerText
+		var oldDesign = JSON.stringify(window.data);
+		for (var p of data.particles) {
+			p.x = p.x + 3 * (.5 - Math.random());
+			p.y = p.y + 3 * (.5 - Math.random());
+		}
+		drawMechanism();
+		await wait();
+		var newRange = +document.getElementById("range").innerText
+		if (newRange < oldrange) {
+			window.data = JSON.parse(oldDesign);
+			document.getElementById("range").innerText = oldrange;
+		}
+		
+	}
+	drawMechanism();
+
+}
+
