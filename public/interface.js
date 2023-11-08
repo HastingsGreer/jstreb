@@ -112,6 +112,7 @@ function drawMechanism() {
           part_index++
         ) {
           mincoord = Math.min(mincoord, -trajectory[2 * part_index + 1]);
+          axlecoord = Math.max(axlecoord, -trajectory[2 * data.mainaxle + 1]);
         }
 
         range = Math.max(
@@ -593,12 +594,22 @@ async function optimize() {
 	optimizing = true;
 	wait();
 	console.log(document.getElementById("range").innerText);
+	var timer = 30;
+	var step = 40;
 	while (optimizing) {
 		var oldrange = +document.getElementById("range").innerText
 		var oldDesign = JSON.stringify(window.data);
 		for (var p of data.particles) {
-			p.x = p.x + 3 * (.5 - Math.random());
-			p.y = p.y + 3 * (.5 - Math.random());
+			if (Math.random() > .5) {
+			p.x = p.x + step * (.5 - Math.random());
+			p.y = p.y + step * (.5 - Math.random());
+			}
+		}
+		for (var p of data.constraints.slider) {
+			if (Math.random() > .5) {
+			p.normal.x = p.normal.x + step * (.5 - Math.random());
+			p.normal.y = p.normal.y + step * (.5 - Math.random());
+			}
 		}
 		drawMechanism();
 		await wait();
@@ -606,8 +617,14 @@ async function optimize() {
 		if (newRange < oldrange) {
 			window.data = JSON.parse(oldDesign);
 			document.getElementById("range").innerText = oldrange;
+			timer -= 1;
+			if (timer == 0) {
+				timer = 30;
+				step *= .6;
+			}
+		} else {
+			timer = 30
 		}
-		
 	}
 	drawMechanism();
 
