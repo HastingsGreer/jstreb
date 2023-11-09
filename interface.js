@@ -580,7 +580,6 @@ window.addEventListener("resize", resizeCanvas);
 window.onload = () => {
   loadMechanism();
   resizeCanvas();
-  optimize();
 };
 presets = {
   "Hinged Counterweight":
@@ -603,8 +602,10 @@ let optimizing = false;
 async function optimize() {
 	if (optimizing) {
 		optimizing = false;
+		document.getElementById("optimize").innerText = "Optimize";
 		return;
 	}
+		document.getElementById("optimize").innerText = "Stop";
 	optimizing = true;
 	wait();
 	console.log(document.getElementById("range").innerText);
