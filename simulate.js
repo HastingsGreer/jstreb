@@ -46,7 +46,7 @@ function System(constraints, masses, positions, velocities) {
   this.velocities = velocities;
 }
 
-export function simulate(particles, constraints, timestep, duration) {
+export function simulate(particles, constraints, timestep, duration, terminate) {
   let masses = [];
   let positions = [];
   let sys_constraints = [];
@@ -70,6 +70,7 @@ export function simulate(particles, constraints, timestep, duration) {
     positions,
     math.zeros(positions.length),
   );
+  system.terminate = terminate;
   let y_0 = math.concat(system.positions, system.velocities);
   let trajectory = rk4(system, y_0, timestep, duration);
   return trajectory;
@@ -142,7 +143,7 @@ function dydt(system, y) {
   system.positions = y._data.slice(0, system.positions.length);
   system.velocities = y._data.slice(system.positions.length, y.length);
   let [dv, terminate] = dvdt(system);
-  return [math.concat(system.velocities, dv), terminate];
+  return [math.concat(system.velocities, dv), system.terminate(y)];
 }
 
 function compute_effect_rod(rod, system) {

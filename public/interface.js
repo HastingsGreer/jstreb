@@ -28,6 +28,7 @@ async function doAnimate() {
     data.constraints,
     data.timestep,
     data.duration,
+	  terminate
   );
 
   data.timestep = 0;
@@ -53,6 +54,17 @@ async function doAnimate() {
   window.data = JSON.parse(reset);
   drawMechanism();
 }
+      function terminate(state) {
+	      state = state._data
+	      var slingx = state[2 * data.armtip] - state[2 * data.projectile];
+	      var slingy = state[2 * data.armtip + 1] - state[2 * data.projectile + 1];
+	      var armx = state[2 * data.armtip] - state[2 * data.mainaxle];
+	      var army = state[2 * data.armtip + 1] - state[2 * data.mainaxle + 1];
+
+	      var wedge = (armx * slingy - slingx * army)
+
+	      return  (armx * slingy - slingx * army) <  1000;
+      }
 
 function drawMechanism() {
   saveMechanism();
@@ -72,13 +84,15 @@ function drawMechanism() {
     data.timestep > 0 &&
     typeof data.timestep === "number"
   ) {
-    try {
+	  //try {
+
       document.getElementById("range").innerText = "";
       const trajectories = simulate(
         data.particles,
         data.constraints,
         data.timestep,
         data.duration,
+	terminate
       );
 
       // Draw the trajectories for the rod constraints
@@ -127,9 +141,9 @@ function drawMechanism() {
       }
       document.getElementById("range").innerText =
         (range / (axlecoord - mincoord)) * data.axleheight;
-    } catch {
-      ctx.fillText("Inconsistent Constraints (Duplicate Sliders?)", 300, 100);
-    }
+    //} catch {
+    //  ctx.fillText("Inconsistent Constraints (Duplicate Sliders?)", 300, 100);
+    //}
   }
 
   // Draw particles
