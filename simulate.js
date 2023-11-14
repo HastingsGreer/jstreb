@@ -79,6 +79,10 @@ export function simulate(
       new Colinear(colinear.reference, colinear.slider, colinear.base),
     );
   }
+  for (var rope of constraints.rope) {
+	  sys_constraints.push(new Rope(rope.p1, rope.p2, rope.p3));}
+
+  console.log(sys_constraints);
 
   var system = new System(
     sys_constraints,
@@ -131,6 +135,9 @@ function dvdt(system) {
     if (constraint instanceof Colinear) {
       return compute_effect_colinear(constraint, system);
     }
+    if (constraint instanceof Rope) {
+      return compute_effect_rope(constraint, system);
+    }
   });
   var interactions2 = math.dotDivide(interactions, [system.masses]);
   interactions2 = math.multiply(interactions2, math.transpose(interactions));
@@ -141,8 +148,8 @@ function dvdt(system) {
     if (constraint instanceof Slider) {
       return compute_acceleration_slider(constraint, system);
     }
-    if (constraint instanceof Colinear) {
-      return compute_acceleration_colinear(constraint, system);
+    if (constraint instanceof Rope) {
+      return compute_acceleration_rope(constraint, system);
     }
   });
   let constraint_forces = math.multiply(math.inv(interactions2), desires);
@@ -167,7 +174,7 @@ function dydt(system, y) {
   let [dv, terminate] = dvdt(system);
   if (system.terminate(y)) {
     for (var i = 0; i < system.constraints.length; i++) {
-      if (system.constraints[i].p1 === 3 || system.constraints[i].p2 === 3) {
+      if (system.constraints[i].p1 === 3 || system.constraints[i].p2 === 3 || system.constraints[i].p3 === 3) {
         system.constraints.splice(i, 1);
         break;
       }
@@ -206,6 +213,47 @@ function compute_acceleration_rod(rod, system) {
   let l = math.sqrt(math.sum(math.dotMultiply(r, r)));
 
   return math.sum(math.dotMultiply(v, v)) / l;
+}
+function compute_effect_rope(rope, system) {
+  let direction = normalize(
+    math.subtract(
+      pget(system.positions, rope.p1),
+      pget(system.positions, rope.p2),
+    ),
+  );
+  let direction1 = normalize(
+    math.subtract(
+      pget(system.positions, rope.p2),
+      pget(system.positions, rope.p3),
+    ),
+  );
+  let result = math.zeros(system.positions.length);
+  pset(result, math.multiply(-1, direction), rope.p1);
+  pset(result, math.add(direction, math.multiply(-1, direction1)), rope.p2);
+  pset(result, direction1	  , rope.p3);
+  return result;
+}
+function compute_acceleration_rope(rod, system) {
+  let r = math.subtract(
+    pget(system.positions, rod.p1),
+    pget(system.positions, rod.p2),
+  );
+  let v = math.subtract(
+    pget(system.velocities, rod.p1),
+    pget(system.velocities, rod.p2),
+  );
+  let l = math.sqrt(math.sum(math.dotMultiply(r, r)));
+  let r1 = math.subtract(
+    pget(system.positions, rod.p2),
+    pget(system.positions, rod.p3),
+  );
+  let v1 = math.subtract(
+    pget(system.velocities, rod.p2),
+    pget(system.velocities, rod.p3),
+  );
+  let l1 = math.sqrt(math.sum(math.dotMultiply(r1, r1)));
+
+  return Math.pow(wedge(r, v), 2) / (l * l * l) + Math.pow(wedge(r1, v1), 2) / (l1 * l1 * l1) ;
 }
 function compute_acceleration_slider(slider, system) {
   return math.sum(math.dotMultiply(pget(system.forces, slider.p), slider.n));
