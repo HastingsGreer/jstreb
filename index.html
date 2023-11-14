@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mechanism Designer</title>
     
-    <script type="module" crossorigin src="/jstreb/assets/index-9b0b307b.js"></script>
+    <script type="module" crossorigin src="/jstreb/assets/index-15336498.js"></script>
     <link rel="stylesheet" href="/jstreb/assets/index-cfbaa475.css">
   </head>
   <body>
@@ -18,7 +18,7 @@
         </select>
 
         <button onclick="doAnimate()">Play</button>
-	<button id=optimize onclick="optimize()">Optimize</button>
+        <button id="optimize" onclick="optimize()">Optimize</button>
         Timestep<input
           id="timestep"
           type="text"
@@ -56,6 +56,7 @@
         <div id="constraintsControl">
           <button onclick="createConstraint('rod')">Add Rod</button>
           <button onclick="createConstraint('slider')">Add Slider</button>
+          <button onclick="createConstraint('colinear')">Add Roller</button>
           <!-- Constraint control boxes will be dynamically inserted here -->
         </div>
       </div>
