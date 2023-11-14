@@ -122,6 +122,22 @@ function drawMechanism() {
           ctx.stroke();
         }
       }
+      for (let i = 0; i < data.constraints.rope.length; i++) {
+        if (!(data.constraints.rope[i].oneway == true)) {
+          const rope = data.constraints.rope[i];
+          const p1Index = rope.p1 * 2; // Index in trajectory array for p1.x and p1.y
+          const p2Index = rope.p2 * 2; // Index in trajectory array for p2.x and p2.y
+          const p3Index = rope.p3 * 2; // Index in trajectory array for p2.x and p2.y
+
+          // Draw the line for the rope's trajectory
+          ctx.beginPath();
+          ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
+          ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
+          ctx.lineTo(trajectory[p3Index], trajectory[p3Index + 1]);
+          ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
+          ctx.stroke();
+        }
+      }
     });
 
     ctx.strokeStyle = "black";
@@ -270,6 +286,9 @@ function createConstraint(type) {
   } else if (type === "colinear") {
     constraint = { reference: 0, slider: 1, base: 2 };
     data.constraints.colinear.push(constraint);
+  } else if (type === "rope") {
+    constraint = {p1:0, p2:1, p2:3};
+    data.constraints.rope.push(constraint);
   } else {
     console.error("Unknown constraint type:", type);
     return;
@@ -323,7 +342,7 @@ function updateUI() {
   // Update Constraint Controls UI
   const constraintsControl = document.getElementById("constraintsControl");
   // Clear current constraint controls except the 'Add' buttons
-  while (constraintsControl.children.length > 3) {
+  while (constraintsControl.children.length > 4) {
     constraintsControl.removeChild(constraintsControl.lastChild);
   }
   // Re-create constraint control boxes
@@ -335,6 +354,9 @@ function updateUI() {
   );
   data.constraints.colinear.forEach((constraint, index) =>
     createConstraintControlBox("colinear", index),
+  );
+  data.constraints.rope.forEach((constraint, index) =>
+    createConstraintControlBox("rope", index),
   );
   const presetsbox = document.getElementById("presets");
   while (presetsbox.children.length > 0) {
@@ -369,6 +391,9 @@ function loadPreset(element) {
   window.data = JSON.parse(window.presets[element.value]);
   if (data.constraints.colinear === undefined) {
     data.constraints.colinear = [];
+  }
+  if (data.constraints.rope === undefined) {
+    data.constraints.rope = [];
   }
   updateUI();
 }
@@ -526,8 +551,57 @@ function createConstraintControlBox(type, index) {
                    .join("")}
                     </select>
                   <button onclick="deleteConstraint('colinear', ${index})">Delete</button>
-            			<input type="checkbox" oninput="data.constraints.rod[${index}].oneway=this.checked;updateUI()" ${
-                    data.constraints.rod[index].oneway ? "checked" : ""
+            			<input type="checkbox" oninput="data.constraints.colinear[${index}].oneway=this.checked;updateUI()" ${
+                    data.constraints.colinear[index].oneway ? "checked" : ""
+                  }></input>
+                `;
+ 
+  } else if (type === "rope") {
+    box.innerHTML = `Rope
+                    <select name="p1" onchange="updateConstraint(this, 'rope', ${index}, 'p1')">
+            	   ${data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === data.constraints.rope[index].p1
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+                    <select name="p2" onchange="updateConstraint(this, 'rope', ${index}, 'p2')">
+
+            	   ${data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === data.constraints.rope[index].p2
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+                    <select name="p3" onchange="updateConstraint(this, 'rope', ${index}, 'p3')">
+
+            	   ${data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === data.constraints.rope[index].p3
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+                  <button onclick="deleteConstraint('rope', ${index})">Delete</button>
+            			<input type="checkbox" oninput="data.constraints.rope[${index}].oneway=this.checked;updateUI()" ${
+                    data.constraints.rope[index].oneway ? "checked" : ""
                   }></input>
                 `;
   }
@@ -676,6 +750,9 @@ presets = {
     '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.2,"duration":40,"particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":527,"y":610,"mass":4,"hovered":false},{"x":534,"y":418,"mass":10,"hovered":false},{"x":698,"y":608,"mass":1,"hovered":false},{"x":560,"y":331,"mass":200,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":2,"normal":{"x":-0.5,"y":0},"hovered":false,"oneway":true},{"p":1,"normal":{"x":0.7,"y":0},"hovered":false,"oneway":true},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true}]}}',
   "Launch Ness Monster":
     '{"projectile":3,"mainaxle":2,"armtip":1,"axleheight":8,"timestep":0.3,"duration":80,"particles":[{"x":600.7448043997729,"y":746.2817936449396,"mass":10,"hovered":false},{"x":559.1340177888502,"y":774.0891411590661,"mass":4,"hovered":false},{"x":660.283069433465,"y":530.0270235522231,"mass":100,"hovered":false},{"x":703.9480403612703,"y":796.722427569219,"mass":1,"hovered":false},{"x":810,"y":530,"mass":10,"hovered":false},{"x":552,"y":500,"mass":10,"hovered":false},{"x":458,"y":666,"mass":10,"hovered":false},{"x":886.1112117706023,"y":662.4242110057531,"mass":10,"hovered":false}],"constraints":{"rod":[{"p1":2,"p2":1,"hovered":false},{"p1":3,"p2":1,"hovered":true},{"p1":6,"p2":5,"hovered":false},{"p1":5,"p2":2,"hovered":false},{"p1":4,"p2":2,"hovered":false},{"p1":4,"p2":7,"hovered":false},{"p1":5,"p2":4,"hovered":false}],"slider":[{"p":0,"normal":{"x":1,"y":2.1049285379913085},"hovered":false},{"p":0,"normal":{"x":-0.6,"y":1.631436664119544},"hovered":false},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true},{"p":6,"normal":{"x":0.6,"y":1},"hovered":false},{"p":6,"normal":{"x":0,"y":1},"hovered":false},{"p":7,"normal":{"x":1,"y":1},"hovered":false},{"p":7,"normal":{"x":0,"y":1},"hovered":false}],"colinear":[{"reference":1,"slider":0,"base":2}]}}',
+	"Pulley Sling":
+	"{\"projectile\":3,\"mainaxle\":0,\"armtip\":1,\"axleheight\":8,\"timestep\":0.2,\"duration\":35,\"particles\":[{\"x\":546.3996560578205,\"y\":584.3575814068853,\"mass\":1,\"hovered\":false},{\"x\":285.60825276178224,\"y\":791.6482113107999,\"mass\":4,\"hovered\":false},{\"x\":560.6373890594891,\"y\":481.2893046533675,\"mass\":10,\"hovered\":false},{\"x\":1000.9376079311984,\"y\":742.8413334783639,\"mass\":1,\"hovered\":false},{\"x\":645.5115623487806,\"y\":541.0151278114975,\"mass\":500,\"hovered\":false},{\"x\":72.74744735998127,\"y\":730.2095434891331,\"mass\":1,\"hovered\":false}],\"constraints\":{\"rod\":[{\"p1\":0,\"p2\":1,\"hovered\":true},{\"p1\":0,\"p2\":2,\"hovered\":false},{\"p1\":2,\"p2\":4,\"hovered\":false},{\"p1\":1,\"p2\":2,\"hovered\":false},{\"p1\":0,\"p2\":4,\"hovered\":false,\"oneway\":true}],\"slider\":[{\"p\":0,\"normal\":{\"x\":0,\"y\":1},\"hovered\":false},{\"p\":0,\"normal\":{\"x\":0.6,\"y\":1},\"hovered\":false},{\"p\":3,\"normal\":{\"x\":0,\"y\":1},\"hovered\":false,\"oneway\":true},{\"p\":5,\"normal\":{\"x\":1,\"y\":1},\"hovered\":false},{\"p\":5,\"normal\":{\"x\":0,\"y\":1},\"hovered\":false}],\"colinear\":[],\"rope\":[{\"p1\":5,\"p2\":1,\"hovered\":false,\"p3\":3}]}}",
+
 };
 let optimizing = false;
 async function optimize() {
