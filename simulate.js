@@ -148,6 +148,9 @@ function dvdt(system) {
     if (constraint instanceof Slider) {
       return compute_acceleration_slider(constraint, system);
     }
+    if (constraint instanceof Colinear) {
+      return compute_acceleration_colinear(constraint, system);
+    }
     if (constraint instanceof Rope) {
       return compute_acceleration_rope(constraint, system);
     }
