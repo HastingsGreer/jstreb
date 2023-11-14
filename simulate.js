@@ -31,6 +31,11 @@ function Rope(p1, p2, p3) {
   this.p2 = p2;
   this.p3 = p3;
 }
+function Colinear(reference, slide, base) {
+  this.reference = reference;
+  this.slide = slide;
+  this.base = base;
+}
 
 function Slider(p, n, oneway) {
   this.p = p;
@@ -46,7 +51,13 @@ function System(constraints, masses, positions, velocities) {
   this.velocities = velocities;
 }
 
-export function simulate(particles, constraints, timestep, duration, terminate) {
+export function simulate(
+  particles,
+  constraints,
+  timestep,
+  duration,
+  terminate,
+) {
   let masses = [];
   let positions = [];
   let sys_constraints = [];
@@ -61,6 +72,11 @@ export function simulate(particles, constraints, timestep, duration, terminate) 
   for (var slider of constraints.slider) {
     sys_constraints.push(
       new Slider(slider.p, [slider.normal.x, slider.normal.y], slider.oneway),
+    );
+  }
+  for (var colinear of constraints.colinear) {
+    sys_constraints.push(
+      new Colinear(colinear.reference, colinear.slider, colinear.base),
     );
   }
 
@@ -112,6 +128,9 @@ function dvdt(system) {
     if (constraint instanceof Slider) {
       return compute_effect_slider(constraint, system);
     }
+    if (constraint instanceof Colinear) {
+      return compute_effect_colinear(constraint, system);
+    }
   });
   var interactions2 = math.dotDivide(interactions, [system.masses]);
   interactions2 = math.multiply(interactions2, math.transpose(interactions));
@@ -121,6 +140,9 @@ function dvdt(system) {
     }
     if (constraint instanceof Slider) {
       return compute_acceleration_slider(constraint, system);
+    }
+    if (constraint instanceof Colinear) {
+      return compute_acceleration_colinear(constraint, system);
     }
   });
   let constraint_forces = math.multiply(math.inv(interactions2), desires);
@@ -143,7 +165,15 @@ function dydt(system, y) {
   system.positions = y._data.slice(0, system.positions.length);
   system.velocities = y._data.slice(system.positions.length, y.length);
   let [dv, terminate] = dvdt(system);
-  return [math.concat(system.velocities, dv), system.terminate(y)];
+  if (system.terminate(y)) {
+    for (var i = 0; i < system.constraints.length; i++) {
+      if (system.constraints[i].p1 === 3 || system.constraints[i].p2 === 3) {
+        system.constraints.splice(i, 1);
+        break;
+      }
+    }
+  }
+  return [math.concat(system.velocities, dv), false];
 }
 
 function compute_effect_rod(rod, system) {
@@ -179,4 +209,81 @@ function compute_acceleration_rod(rod, system) {
 }
 function compute_acceleration_slider(slider, system) {
   return math.sum(math.dotMultiply(pget(system.forces, slider.p), slider.n));
+}
+
+function compute_effect_colinear(colinear, system) {
+  var [x, y] = pget(system.positions, colinear.slide);
+  var [h, v] = pget(system.velocities, colinear.slide);
+
+  var [xref, yref] = pget(system.positions, colinear.reference);
+  var [href, vref] = pget(system.velocities, colinear.reference);
+
+  var [xbase, ybase] = pget(system.positions, colinear.base);
+  var [hbase, vbase] = pget(system.velocities, colinear.base);
+
+  x = x - xbase;
+  y = y - ybase;
+  h = h - hbase;
+  v = v - vbase;
+
+  xref = xref - xbase;
+  yref = yref - ybase;
+  href = href - hbase;
+  vref = vref - vbase;
+
+  var denom = Math.sqrt(xref * xref + yref * yref);
+  var denom3 = denom * denom * denom;
+
+  var e_x = -yref / denom;
+  var e_y = xref / denom;
+
+  var e_xref = (x * xref * yref + y * yref * yref) / denom3;
+  var e_yref = -(x * xref * xref + xref * y * yref) / denom3;
+
+  var e_xbase = -e_x - e_xref;
+  var e_ybase = -e_y - e_yref;
+  let result = math.zeros(system.positions.length);
+
+  pset(result, [e_x, e_y], colinear.slide);
+  pset(result, [e_xref, e_yref], colinear.reference);
+  pset(result, [e_xbase, e_ybase], colinear.base);
+  return result;
+}
+function compute_acceleration_colinear(colinear, system) {
+  var [x, y] = pget(system.positions, colinear.slide);
+  var [h, v] = pget(system.velocities, colinear.slide);
+
+  var [xref, yref] = pget(system.positions, colinear.reference);
+  var [href, vref] = pget(system.velocities, colinear.reference);
+
+  var [xbase, ybase] = pget(system.positions, colinear.base);
+  var [hbase, vbase] = pget(system.velocities, colinear.base);
+
+  x = x - xbase;
+  y = y - ybase;
+  h = h - hbase;
+  v = v - vbase;
+
+  xref = xref - xbase;
+  yref = yref - ybase;
+  href = href - hbase;
+  vref = vref - vbase;
+
+  var denom = Math.sqrt(xref * xref + yref * yref);
+
+  var accel =
+    ((2 * href * x * xref * xref -
+      2 * h * xref * xref * xref -
+      vref * xref * xref * y +
+      3 * vref * x * xref * yref -
+      2 * v * xref * xref * yref +
+      3 * href * xref * y * yref -
+      href * x * yref * yref -
+      2 * h * xref * yref * yref +
+      2 * vref * y * yref * yref -
+      2 * v * yref * yref * yref) *
+      (vref * xref - href * yref)) /
+    (denom * denom * denom * denom * denom);
+
+  return -accel;
 }

@@ -28,7 +28,7 @@ async function doAnimate() {
     data.constraints,
     data.timestep,
     data.duration,
-	  terminate
+    terminate,
   );
 
   data.timestep = 0;
@@ -54,17 +54,27 @@ async function doAnimate() {
   window.data = JSON.parse(reset);
   drawMechanism();
 }
-      function terminate(state) {
-	      state = state._data
-	      var slingx = state[2 * data.armtip] - state[2 * data.projectile];
-	      var slingy = state[2 * data.armtip + 1] - state[2 * data.projectile + 1];
-	      var armx = state[2 * data.armtip] - state[2 * data.mainaxle];
-	      var army = state[2 * data.armtip + 1] - state[2 * data.mainaxle + 1];
+function terminate(state) {
+  state = state._data;
+  var slingx = state[2 * data.armtip] - state[2 * data.projectile];
+  var slingy = state[2 * data.armtip + 1] - state[2 * data.projectile + 1];
 
-	      var wedge = (armx * slingy - slingx * army)
+  var norms = Math.sqrt(slingx * slingx + slingy * slingy);
 
-	      return  (armx * slingy - slingx * army) <  1000;
-      }
+  slingx = slingx / norms;
+  slingy = slingy / norms;
+
+  var armx = state[2 * data.armtip] - state[2 * data.mainaxle];
+  var army = state[2 * data.armtip + 1] - state[2 * data.mainaxle + 1];
+  var norma = Math.sqrt(armx * armx + army * army);
+
+  armx /= norma;
+  army /= norma;
+
+  var wedge = armx * slingy - slingx * army;
+
+  return armx * slingy - slingx * army < 0;
+}
 
 function drawMechanism() {
   saveMechanism();
@@ -84,63 +94,76 @@ function drawMechanism() {
     data.timestep > 0 &&
     typeof data.timestep === "number"
   ) {
-	  //try {
+    //try {
 
-      document.getElementById("range").innerText = "";
-      const trajectories = simulate(
-        data.particles,
-        data.constraints,
-        data.timestep,
-        data.duration,
-	terminate
-      );
+    document.getElementById("range").innerText = "";
+    const trajectories = simulate(
+      data.particles,
+      data.constraints,
+      data.timestep,
+      data.duration,
+      terminate,
+    );
 
-      // Draw the trajectories for the rod constraints
-      trajectories.forEach((trajectory) => {
-        trajectory = trajectory._data;
-        for (let i = 0; i < data.constraints.rod.length; i++) {
-          if (!(data.constraints.rod[i].oneway == true)) {
-            const rod = data.constraints.rod[i];
-            const p1Index = rod.p1 * 2; // Index in trajectory array for p1.x and p1.y
-            const p2Index = rod.p2 * 2; // Index in trajectory array for p2.x and p2.y
+    // Draw the trajectories for the rod constraints
+    trajectories.forEach((trajectory) => {
+      trajectory = trajectory._data;
+      for (let i = 0; i < data.constraints.rod.length; i++) {
+        if (!(data.constraints.rod[i].oneway == true)) {
+          const rod = data.constraints.rod[i];
+          const p1Index = rod.p1 * 2; // Index in trajectory array for p1.x and p1.y
+          const p2Index = rod.p2 * 2; // Index in trajectory array for p2.x and p2.y
 
-            // Draw the line for the rod's trajectory
-            ctx.beginPath();
-            ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
-            ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
-            ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
-            ctx.stroke();
-          }
+          // Draw the line for the rod's trajectory
+          ctx.beginPath();
+          ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
+          ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
+          ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
+          ctx.stroke();
         }
-      });
-
-      ctx.strokeStyle = "black";
-      var axlecoord = -data.particles[data.mainaxle].y;
-      var mincoord = -data.particles[data.mainaxle].y;
-      var range = 0;
-      for (var trajectory of trajectories) {
-        trajectory = trajectory._data;
-        for (
-          var part_index = 0;
-          part_index < data.particles.length;
-          part_index++
-        ) {
-          mincoord = Math.min(mincoord, -trajectory[2 * part_index + 1]);
-          axlecoord = Math.max(axlecoord, -trajectory[2 * data.mainaxle + 1]);
-        }
-
-        range = Math.max(
-          range,
-          2 *
-            Math.max(
-              0,
-              -trajectory[2 * data.particles.length + 2 * data.projectile + 1],
-            ) *
-            trajectory[2 * data.particles.length + 2 * data.projectile],
-        );
       }
-      document.getElementById("range").innerText =
-        (range / (axlecoord - mincoord)) * data.axleheight;
+    });
+
+    ctx.strokeStyle = "black";
+    var axlecoord = -data.particles[data.mainaxle].y;
+    var mincoord = -data.particles[data.mainaxle].y;
+    var range = 0;
+    for (var trajectory of trajectories) {
+      trajectory = trajectory._data;
+      for (
+        var part_index = 0;
+        part_index < data.particles.length;
+        part_index++
+      ) {
+        if (trajectory[2 * part_index] < 2000) {
+          mincoord = Math.min(mincoord, -trajectory[2 * part_index + 1]);
+        }
+        axlecoord = Math.max(axlecoord, -trajectory[2 * data.mainaxle + 1]);
+      }
+
+      range = Math.max(
+        range,
+        2 *
+          Math.max(
+            0,
+            -trajectory[2 * data.particles.length + 2 * data.projectile + 1],
+          ) *
+          trajectory[2 * data.particles.length + 2 * data.projectile],
+      );
+    }
+    var height1 = axlecoord - mincoord;
+    var height2 = Math.sqrt(
+      Math.pow(
+        data.particles[data.armtip].x - data.particles[data.mainaxle].x,
+        2,
+      ) +
+        Math.pow(
+          data.particles[data.armtip].y - data.particles[data.projectile].y,
+          2,
+        ),
+    );
+    document.getElementById("range").innerText =
+      (range / Math.max(height1, 0.75 * height2)) * data.axleheight;
     //} catch {
     //  ctx.fillText("Inconsistent Constraints (Duplicate Sliders?)", 300, 100);
     //}
@@ -244,6 +267,9 @@ function createConstraint(type) {
     }
     constraint = { p: 0, normal: { x: 0, y: 1 }, hovered: false }; // Default to the first particle and a vertical normal
     data.constraints.slider.push(constraint);
+  } else if (type === "colinear") {
+    constraint = { reference: 0, slider: 1, base: 2 };
+    data.constraints.colinear.push(constraint);
   } else {
     console.error("Unknown constraint type:", type);
     return;
@@ -262,6 +288,9 @@ function updateConstraint(element, type, index, property) {
   } else if (property === "normalX" || property === "normalY") {
     constraint.normal[property.slice(-1).toLowerCase()] = value;
     drawMechanism();
+  } else {
+    constraint[property] = value;
+    updateUI();
   }
 }
 
@@ -294,7 +323,7 @@ function updateUI() {
   // Update Constraint Controls UI
   const constraintsControl = document.getElementById("constraintsControl");
   // Clear current constraint controls except the 'Add' buttons
-  while (constraintsControl.children.length > 2) {
+  while (constraintsControl.children.length > 3) {
     constraintsControl.removeChild(constraintsControl.lastChild);
   }
   // Re-create constraint control boxes
@@ -303,6 +332,9 @@ function updateUI() {
   );
   data.constraints.slider.forEach((constraint, index) =>
     createConstraintControlBox("slider", index),
+  );
+  data.constraints.colinear.forEach((constraint, index) =>
+    createConstraintControlBox("colinear", index),
   );
   const presetsbox = document.getElementById("presets");
   while (presetsbox.children.length > 0) {
@@ -335,6 +367,9 @@ function updateUI() {
 }
 function loadPreset(element) {
   window.data = JSON.parse(window.presets[element.value]);
+  if (data.constraints.colinear === undefined) {
+    data.constraints.colinear = [];
+  }
   updateUI();
 }
 
@@ -445,22 +480,64 @@ function createConstraintControlBox(type, index) {
                     data.constraints.slider[index].oneway ? "checked" : ""
                   }></input>
                 `;
+  } else if (type === "colinear") {
+    box.innerHTML = `Roller Track1
+                    <select name="reference" onchange="updateConstraint(this, 'colinear', ${index}, 'reference')">
+            	   ${data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === data.constraints.colinear[index].reference
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+		    Slide
+                    <select name="slider" onchange="updateConstraint(this, 'colinear', ${index}, 'slider')">
+
+            	   ${data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === data.constraints.colinear[index].slider
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+		    Track2
+                    <select name="base" onchange="updateConstraint(this, 'colinear', ${index}, 'base')">
+
+            	   ${data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === data.constraints.colinear[index].base
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+                  <button onclick="deleteConstraint('colinear', ${index})">Delete</button>
+            			<input type="checkbox" oninput="data.constraints.rod[${index}].oneway=this.checked;updateUI()" ${
+                    data.constraints.rod[index].oneway ? "checked" : ""
+                  }></input>
+                `;
   }
 
   box.addEventListener("mouseenter", () => {
-    if (type === "rod") {
-      data.constraints.rod[index].hovered = true;
-    } else if (type === "slider") {
-      data.constraints.slider[index].hovered = true;
-    }
+    data.constraints[type][index].hovered = true;
     drawMechanism();
   });
   box.addEventListener("mouseleave", () => {
-    if (type === "rod") {
-      data.constraints.rod[index].hovered = false;
-    } else if (type === "slider") {
-      data.constraints.slider[index].hovered = false;
-    }
+    data.constraints[type][index].hovered = false;
     drawMechanism();
   });
   document.getElementById("constraintsControl").appendChild(box);
@@ -587,61 +664,61 @@ presets = {
   "Fixed Counterweight":
     '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.3, "duration":35, "particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":346,"y":657.6332053503577,"mass":4,"hovered":false},{"x":589,"y":444.719739113931,"mass":100,"hovered":false},{"x":668,"y":673.6242863315215,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":0,"normal":{"x":0.6,"y":1},"hovered":false},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true}]}}',
   "Floating Arm Trebuchet":
-    '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.3, "duration":35, "particles":[{"x":487.0140918429353,"y":517.0092960532231,"mass":1,"hovered":false},{"x":346,"y":657.6332053503577,"mass":4,"hovered":false},{"x":589,"y":444.719739113931,"mass":100,"hovered":false},{"x":668,"y":673.6242863315215,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":2,"normal":{"x":0.6,"y":0},"hovered":false},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true}]}}',
+    '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.3, "duration":35, "particles":[{"x":487.0140918429353,"y":517.0092960532231,"mass":1,"hovered":false},{"x":346,"y":657.6332053503577,"mass":4,"hovered":false},{"x":589,"y":444.719739113931,"mass":100,"hovered":false},{"x":589,"y":673.6242863315215,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":2,"normal":{"x":0.6,"y":0},"hovered":false},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true}]}}',
   "Floating Arm Whipper":
-    '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.3,"duration":30,"particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":659,"y":451,"mass":4,"hovered":false},{"x":483,"y":498,"mass":10,"hovered":false},{"x":551,"y":434,"mass":1,"hovered":false},{"x":560,"y":368,"mass":200,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false},{"p1":0,"p2":3,"hovered":false,"oneway":true},{"p1":0,"p2":4,"hovered":false,"oneway":true}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":4,"normal":{"x":0.6,"y":0},"hovered":false}]}}',
+    '{"projectile":3,"mainaxle":0,"armtip":1,"axleheight":8,"timestep":0.25,"duration":37,"particles":[{"x":496.3768762864126,"y":477.6488505996885,"mass":1,"hovered":false},{"x":677.5437773419831,"y":471.0994822534413,"mass":4,"hovered":false},{"x":468.04119394558313,"y":453.55516542833107,"mass":10,"hovered":false},{"x":557.0821854673263,"y":431.8078926373332,"mass":1,"hovered":false},{"x":563.0719502933894,"y":340.79567817868605,"mass":200,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false},{"p1":0,"p2":3,"hovered":false,"oneway":true},{"p1":0,"p2":4,"hovered":false,"oneway":true}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":4,"normal":{"x":0.6,"y":0},"hovered":false}],"colinear":[]}}',
   Whipper:
-    '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.3,"duration":40,"particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":659,"y":451,"mass":4,"hovered":false},{"x":483,"y":498,"mass":10,"hovered":false},{"x":551,"y":434,"mass":1,"hovered":false},{"x":560,"y":368,"mass":200,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false},{"p1":0,"p2":3,"hovered":false,"oneway":true},{"p1":0,"p2":4,"hovered":false,"oneway":true}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":0,"normal":{"x":0.6,"y":0},"hovered":false}]}}',
+    '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.3,"duration":60,"particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":759,"y":451,"mass":4,"hovered":false},{"x":483,"y":498,"mass":10,"hovered":false},{"x":551,"y":434,"mass":1,"hovered":false},{"x":560,"y":368,"mass":200,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false},{"p1":0,"p2":3,"hovered":false,"oneway":true},{"p1":0,"p2":4,"hovered":false,"oneway":true}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":0,"normal":{"x":0.6,"y":0},"hovered":false}]}}',
   Fiffer:
     '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.2,"duration":20,"particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":484,"y":656,"mass":4,"hovered":false},{"x":504,"y":433,"mass":10,"hovered":false},{"x":644,"y":661,"mass":1,"hovered":false},{"x":653,"y":451,"mass":10,"hovered":false},{"x":749,"y":428,"mass":1,"hovered":false},{"x":749,"y":483,"mass":500,"hovered":false},{"x":566,"y":505,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false},{"p1":7,"p2":6,"hovered":false},{"p1":6,"p2":4,"hovered":false},{"p1":4,"p2":5,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":0,"normal":{"x":0.6,"y":1},"hovered":false},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true},{"p":7,"normal":{"x":0.7,"y":1},"hovered":false},{"p":7,"normal":{"x":0,"y":1},"hovered":false},{"p":5,"normal":{"x":0,"y":1},"hovered":false},{"p":5,"normal":{"x":0.7,"y":1},"hovered":false}]}}',
 
   "Floating Arm King Arthur":
     '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.2,"duration":40,"particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":527,"y":610,"mass":4,"hovered":false},{"x":534,"y":418,"mass":10,"hovered":false},{"x":698,"y":608,"mass":1,"hovered":false},{"x":560,"y":331,"mass":200,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":2,"normal":{"x":-0.5,"y":0},"hovered":false,"oneway":true},{"p":1,"normal":{"x":0.7,"y":0},"hovered":false,"oneway":true},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true}]}}',
+  "Launch Ness Monster":
+    '{"projectile":3,"mainaxle":2,"armtip":1,"axleheight":8,"timestep":0.3,"duration":80,"particles":[{"x":600.7448043997729,"y":746.2817936449396,"mass":10,"hovered":false},{"x":559.1340177888502,"y":774.0891411590661,"mass":4,"hovered":false},{"x":660.283069433465,"y":530.0270235522231,"mass":100,"hovered":false},{"x":703.9480403612703,"y":796.722427569219,"mass":1,"hovered":false},{"x":810,"y":530,"mass":10,"hovered":false},{"x":552,"y":500,"mass":10,"hovered":false},{"x":458,"y":666,"mass":10,"hovered":false},{"x":886.1112117706023,"y":662.4242110057531,"mass":10,"hovered":false}],"constraints":{"rod":[{"p1":2,"p2":1,"hovered":false},{"p1":3,"p2":1,"hovered":true},{"p1":6,"p2":5,"hovered":false},{"p1":5,"p2":2,"hovered":false},{"p1":4,"p2":2,"hovered":false},{"p1":4,"p2":7,"hovered":false},{"p1":5,"p2":4,"hovered":false}],"slider":[{"p":0,"normal":{"x":1,"y":2.1049285379913085},"hovered":false},{"p":0,"normal":{"x":-0.6,"y":1.631436664119544},"hovered":false},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true},{"p":6,"normal":{"x":0.6,"y":1},"hovered":false},{"p":6,"normal":{"x":0,"y":1},"hovered":false},{"p":7,"normal":{"x":1,"y":1},"hovered":false},{"p":7,"normal":{"x":0,"y":1},"hovered":false}],"colinear":[{"reference":1,"slider":0,"base":2}]}}',
 };
 let optimizing = false;
 async function optimize() {
-	if (optimizing) {
-		optimizing = false;
-		document.getElementById("optimize").innerText = "Optimize";
-		return;
-	}
-		document.getElementById("optimize").innerText = "Stop";
-	optimizing = true;
-	wait();
-	console.log(document.getElementById("range").innerText);
-	var timer = 30;
-	var step = 40;
-	while (optimizing) {
-		var oldrange = +document.getElementById("range").innerText
-		var oldDesign = JSON.stringify(window.data);
-		for (var p of data.particles) {
-			if (Math.random() > .5) {
-			p.x = p.x + step * (.5 - Math.random());
-			p.y = p.y + step * (.5 - Math.random());
-			}
-		}
-		for (var p of data.constraints.slider) {
-			if (Math.random() > .5) {
-			p.normal.x = p.normal.x + step * (.5 - Math.random());
-			p.normal.y = p.normal.y + step * (.5 - Math.random());
-			}
-		}
-		drawMechanism();
-		await wait();
-		var newRange = +document.getElementById("range").innerText
-		if (newRange < oldrange) {
-			window.data = JSON.parse(oldDesign);
-			document.getElementById("range").innerText = oldrange;
-			timer -= 1;
-			if (timer == 0) {
-				timer = 30;
-				step *= .6;
-			}
-		} else {
-			timer = 30
-		}
-	}
-	drawMechanism();
-
+  if (optimizing) {
+    optimizing = false;
+    document.getElementById("optimize").innerText = "Optimize";
+    return;
+  }
+  document.getElementById("optimize").innerText = "Stop";
+  optimizing = true;
+  wait();
+  console.log(document.getElementById("range").innerText);
+  var timer = 30;
+  var step = 40;
+  while (optimizing) {
+    var oldrange = +document.getElementById("range").innerText;
+    var oldDesign = JSON.stringify(window.data);
+    for (var p of data.particles) {
+      if (Math.random() > 0.5) {
+        p.x = p.x + step * (0.5 - Math.random());
+        p.y = p.y + step * (0.5 - Math.random());
+      }
+    }
+    //for (var p of data.constraints.slider) {
+    //	if (Math.random() > .5) {
+    //	p.normal.x = p.normal.x + step / 80 * (.5 - Math.random());
+    //	p.normal.y = p.normal.y + step / 80 * (.5 - Math.random());
+    //	}
+    //}
+    drawMechanism();
+    await wait();
+    var newRange = +document.getElementById("range").innerText;
+    if (newRange < oldrange) {
+      window.data = JSON.parse(oldDesign);
+      document.getElementById("range").innerText = oldrange;
+      timer -= 1;
+      if (timer == 0) {
+        timer = 30;
+        step *= 0.6;
+      }
+    } else {
+      timer = 30;
+    }
+  }
+  drawMechanism();
 }
-
