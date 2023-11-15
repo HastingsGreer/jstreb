@@ -31,10 +31,11 @@ function Rope(p1, p2, p3) {
   this.p2 = p2;
   this.p3 = p3;
 }
-function Colinear(reference, slide, base) {
+function Colinear(reference, slide, base, oneway) {
   this.reference = reference;
   this.slide = slide;
   this.base = base;
+  this.oneway = oneway;
 }
 
 function Slider(p, n, oneway) {
@@ -76,7 +77,7 @@ export function simulate(
   }
   for (var colinear of constraints.colinear) {
     sys_constraints.push(
-      new Colinear(colinear.reference, colinear.slider, colinear.base),
+      new Colinear(colinear.reference, colinear.slider, colinear.base, colinear.oneway),
     );
   }
   for (var rope of constraints.rope) {
