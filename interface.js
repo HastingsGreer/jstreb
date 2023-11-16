@@ -615,7 +615,9 @@ function createConstraintControlBox(type, index) {
                   }></input>
                 `;
   } else if (type === "rope") {
-    box.innerHTML = `Rope
+    box.innerHTML = `Rope and pulley.
+Fixed end:
+
                     <select name="p1" onchange="updateConstraint(this, 'rope', ${index}, 'p1')">
             	   ${data.particles
                    .map((_, i) => i)
@@ -627,6 +629,7 @@ function createConstraintControlBox(type, index) {
                    )
                    .join("")}
                     </select>
+		    Pulley:
                     <select name="p2" onchange="updateConstraint(this, 'rope', ${index}, 'p2')">
 
             	   ${data.particles
@@ -639,6 +642,7 @@ function createConstraintControlBox(type, index) {
                    )
                    .join("")}
                     </select>
+		    Fixed end:
                     <select name="p3" onchange="updateConstraint(this, 'rope', ${index}, 'p3')">
 
             	   ${data.particles
