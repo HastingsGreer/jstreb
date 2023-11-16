@@ -31,6 +31,13 @@ function Rope(p1, p2, p3) {
   this.p2 = p2;
   this.p3 = p3;
 }
+
+function F2k(reference, slide, base) {
+  this.reference = reference;
+  this.slide = slide;
+  this.base = base;
+  this.fatmode = false;
+}
 function Colinear(reference, slide, base, oneway) {
   this.reference = reference;
   this.slide = slide;
@@ -77,11 +84,20 @@ export function simulate(
   }
   for (var colinear of constraints.colinear) {
     sys_constraints.push(
-      new Colinear(colinear.reference, colinear.slider, colinear.base, colinear.oneway),
+      new Colinear(
+        colinear.reference,
+        colinear.slider,
+        colinear.base,
+        colinear.oneway,
+      ),
     );
   }
+  for (var f2k of constraints.f2k) {
+    sys_constraints.push(new F2k(f2k.reference, f2k.slider, f2k.base));
+  }
   for (var rope of constraints.rope) {
-	  sys_constraints.push(new Rope(rope.p1, rope.p2, rope.p3));}
+    sys_constraints.push(new Rope(rope.p1, rope.p2, rope.p3));
+  }
 
   console.log(sys_constraints);
 
@@ -136,6 +152,9 @@ function dvdt(system) {
     if (constraint instanceof Colinear) {
       return compute_effect_colinear(constraint, system);
     }
+    if (constraint instanceof F2k) {
+      return compute_effect_f2k(constraint, system);
+    }
     if (constraint instanceof Rope) {
       return compute_effect_rope(constraint, system);
     }
@@ -151,6 +170,9 @@ function dvdt(system) {
     }
     if (constraint instanceof Colinear) {
       return compute_acceleration_colinear(constraint, system);
+    }
+    if (constraint instanceof F2k) {
+      return compute_acceleration_f2k(constraint, system);
     }
     if (constraint instanceof Rope) {
       return compute_acceleration_rope(constraint, system);
@@ -178,7 +200,11 @@ function dydt(system, y) {
   let [dv, terminate] = dvdt(system);
   if (system.terminate(y)) {
     for (var i = 0; i < system.constraints.length; i++) {
-      if (system.constraints[i].p1 === 3 || system.constraints[i].p2 === 3 || system.constraints[i].p3 === 3) {
+      if (
+        system.constraints[i].p1 === 3 ||
+        system.constraints[i].p2 === 3 ||
+        system.constraints[i].p3 === 3
+      ) {
         system.constraints.splice(i, 1);
         break;
       }
@@ -234,7 +260,7 @@ function compute_effect_rope(rope, system) {
   let result = math.zeros(system.positions.length);
   pset(result, math.multiply(-1, direction), rope.p1);
   pset(result, math.add(direction, math.multiply(-1, direction1)), rope.p2);
-  pset(result, direction1	  , rope.p3);
+  pset(result, direction1, rope.p3);
   return result;
 }
 function compute_acceleration_rope(rod, system) {
@@ -257,7 +283,10 @@ function compute_acceleration_rope(rod, system) {
   );
   let l1 = math.sqrt(math.sum(math.dotMultiply(r1, r1)));
 
-  return Math.pow(wedge(r, v), 2) / (l * l * l) + Math.pow(wedge(r1, v1), 2) / (l1 * l1 * l1) ;
+  return (
+    Math.pow(wedge(r, v), 2) / (l * l * l) +
+    Math.pow(wedge(r1, v1), 2) / (l1 * l1 * l1)
+  );
 }
 function compute_acceleration_slider(slider, system) {
   return math.sum(math.dotMultiply(pget(system.forces, slider.p), slider.n));
@@ -310,6 +339,102 @@ function compute_acceleration_colinear(colinear, system) {
 
   var [xbase, ybase] = pget(system.positions, colinear.base);
   var [hbase, vbase] = pget(system.velocities, colinear.base);
+
+  x = x - xbase;
+  y = y - ybase;
+  h = h - hbase;
+  v = v - vbase;
+
+  xref = xref - xbase;
+  yref = yref - ybase;
+  href = href - hbase;
+  vref = vref - vbase;
+
+  var denom = Math.sqrt(xref * xref + yref * yref);
+
+  var accel =
+    ((2 * href * x * xref * xref -
+      2 * h * xref * xref * xref -
+      vref * xref * xref * y +
+      3 * vref * x * xref * yref -
+      2 * v * xref * xref * yref +
+      3 * href * xref * y * yref -
+      href * x * yref * yref -
+      2 * h * xref * yref * yref +
+      2 * vref * y * yref * yref -
+      2 * v * yref * yref * yref) *
+      (vref * xref - href * yref)) /
+    (denom * denom * denom * denom * denom);
+
+  return -accel;
+}
+
+function compute_effect_f2k(f2k, system) {
+  var [x, y] = pget(system.positions, f2k.slide);
+  var [h, v] = pget(system.velocities, f2k.slide);
+
+  var [xref, yref] = pget(system.positions, f2k.reference);
+  var [href, vref] = pget(system.velocities, f2k.reference);
+
+  var [xbase, ybase] = pget(system.positions, f2k.base);
+  var [hbase, vbase] = pget(system.velocities, f2k.base);
+
+  x = x - xbase;
+  y = y - ybase;
+  h = h - hbase;
+  v = v - vbase;
+
+  xref = xref - xbase;
+  yref = yref - ybase;
+  href = href - hbase;
+  vref = vref - vbase;
+
+  let result = math.zeros(system.positions.length);
+
+  if (yref < 0) {
+    if (!f2k.fatmode) {
+      var baselength = x;
+      var tiplength = xref - x;
+
+      f2k.ratio = baselength / tiplength;
+    }
+    f2k.fatmode = true;
+  }
+  if (f2k.fatmode) {
+    pset(result, [0, 1], f2k.base);
+    pset(result, [0, f2k.ratio], f2k.reference);
+    return result;
+  }
+
+  var denom = Math.sqrt(xref * xref + yref * yref);
+  var denom3 = denom * denom * denom;
+
+  var e_x = -yref / denom;
+  var e_y = xref / denom;
+
+  var e_xref = (x * xref * yref + y * yref * yref) / denom3;
+  var e_yref = -(x * xref * xref + xref * y * yref) / denom3;
+
+  var e_xbase = -e_x - e_xref;
+  var e_ybase = -e_y - e_yref;
+
+  pset(result, [e_x, e_y], f2k.slide);
+  pset(result, [e_xref, e_yref], f2k.reference);
+  pset(result, [e_xbase, e_ybase], f2k.base);
+  return result;
+}
+function compute_acceleration_f2k(f2k, system) {
+  if (f2k.fatmode) {
+    return -1 - f2k.ratio;
+  }
+  var [x, y] = pget(system.positions, f2k.slide);
+  var [h, v] = pget(system.velocities, f2k.slide);
+
+  var [xref, yref] = pget(system.positions, f2k.reference);
+  var [href, vref] = pget(system.velocities, f2k.reference);
+
+  var [xbase, ybase] = pget(system.positions, f2k.base);
+  var [hbase, vbase] = pget(system.velocities, f2k.base);
 
   x = x - xbase;
   y = y - ybase;

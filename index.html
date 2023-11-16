@@ -17,6 +17,8 @@
 
         <button onclick="doAnimate()">Play</button>
         <button id="optimize" onclick="optimize()">Optimize</button>
+        <button id="load" onclick="load()">Load</button>
+        <button id="save" onclick="save()">Save</button>
         Timestep<input
           id="timestep"
           type="text"
@@ -54,7 +56,8 @@
         <div id="constraintsControl">
           <button onclick="createConstraint('rod')">Add Rod</button>
           <button onclick="createConstraint('slider')">Add Slider</button>
-	  <button onclick="createConstraint('colinear')">Add Roller</button>
+          <button onclick="createConstraint('colinear')">Add Roller</button>
+          <button onclick="createConstraint('f2k')">Add F2k</button>
           <button onclick="createConstraint('rope')">Add Rope</button>
           <!-- Constraint control boxes will be dynamically inserted here -->
         </div>
