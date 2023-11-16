@@ -416,14 +416,14 @@ function createParticleControlBox(index) {
                 <label>Y: <input type="text" min="0" max="${canvas.height}" value="${data.particles[index].y}" oninput="updateParticle(${index}, 'y', this.value)"></label>
                 <button onclick="deleteParticle(${index})">X</button>
               `;
-  box.addEventListener("mouseenter", () => {
-    data.particles[index].hovered = true;
-    drawMechanism();
-  });
-  box.addEventListener("mouseleave", () => {
-    data.particles[index].hovered = false;
-    drawMechanism();
-  });
+  //box.addEventListener("mouseenter", () => {
+  //  data.particles[index].hovered = true;
+  //  drawMechanism();
+  //});
+  //box.addEventListener("mouseleave", () => {
+  //  data.particles[index].hovered = false;
+  //  drawMechanism();
+  //});
   document.getElementById("particlesControl").appendChild(box);
 }
 function constraintExists(p1, p2) {
@@ -658,14 +658,14 @@ function createConstraintControlBox(type, index) {
                 `;
   }
 
-  box.addEventListener("mouseenter", () => {
-    data.constraints[type][index].hovered = true;
-    drawMechanism();
-  });
-  box.addEventListener("mouseleave", () => {
-    data.constraints[type][index].hovered = false;
-    drawMechanism();
-  });
+  //box.addEventListener("mouseenter", () => {
+  //  data.constraints[type][index].hovered = true;
+  //  drawMechanism();
+  //});
+  //box.addEventListener("mouseleave", () => {
+  //  data.constraints[type][index].hovered = false;
+  //  drawMechanism();
+  //});
   document.getElementById("constraintsControl").appendChild(box);
 }
 // Global variable to track the currently dragged particle, if any
