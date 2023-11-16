@@ -94,7 +94,7 @@ function drawMechanism() {
     data.timestep > 0 &&
     typeof data.timestep === "number"
   ) {
-    //    try {
+        try {
 
     document.getElementById("range").innerText = "";
     const trajectories = simulate(
@@ -180,9 +180,9 @@ function drawMechanism() {
     );
     document.getElementById("range").innerText =
       (range / Math.max(height1, 0.75 * height2)) * data.axleheight;
-    //} catch {
-    //  ctx.fillText("Inconsistent Constraints (Duplicate Sliders?)", 300, 100);
-    //}
+    } catch {
+      ctx.fillText("Inconsistent Constraints (Duplicate Sliders?)", 300, 100);
+    }
   }
 
   // Draw particles
