@@ -94,7 +94,7 @@ function drawMechanism() {
     data.timestep > 0 &&
     typeof data.timestep === "number"
   ) {
-    try {
+    //    try {
 
     document.getElementById("range").innerText = "";
     const trajectories = simulate(
@@ -180,9 +180,9 @@ function drawMechanism() {
     );
     document.getElementById("range").innerText =
       (range / Math.max(height1, 0.75 * height2)) * data.axleheight;
-    } catch {
-      ctx.fillText("Inconsistent Constraints (Duplicate Sliders?)", 300, 100);
-    }
+    //} catch {
+    //  ctx.fillText("Inconsistent Constraints (Duplicate Sliders?)", 300, 100);
+    //}
   }
 
   // Draw particles
@@ -286,8 +286,11 @@ function createConstraint(type) {
   } else if (type === "colinear") {
     constraint = { reference: 0, slider: 1, base: 2 };
     data.constraints.colinear.push(constraint);
+  } else if (type === "f2k") {
+    constraint = { reference: 0, slider: 1, base: 2 };
+    data.constraints.f2k.push(constraint);
   } else if (type === "rope") {
-    constraint = {p1:0, p2:1, p2:3};
+    constraint = { p1: 0, p2: 1, p2: 3 };
     data.constraints.rope.push(constraint);
   } else {
     console.error("Unknown constraint type:", type);
@@ -355,6 +358,9 @@ function updateUI() {
   data.constraints.colinear.forEach((constraint, index) =>
     createConstraintControlBox("colinear", index),
   );
+  data.constraints.f2k.forEach((constraint, index) =>
+    createConstraintControlBox("f2k", index),
+  );
   data.constraints.rope.forEach((constraint, index) =>
     createConstraintControlBox("rope", index),
   );
@@ -391,6 +397,9 @@ function loadPreset(element) {
   window.data = JSON.parse(window.presets[element.value]);
   if (data.constraints.colinear === undefined) {
     data.constraints.colinear = [];
+  }
+  if (data.constraints.f2k === undefined) {
+    data.constraints.f2k = [];
   }
   if (data.constraints.rope === undefined) {
     data.constraints.rope = [];
@@ -555,7 +564,56 @@ function createConstraintControlBox(type, index) {
                     data.constraints.colinear[index].oneway ? "checked" : ""
                   }></input>
                 `;
- 
+  } else if (type === "f2k") {
+    box.innerHTML = `F2k Arm Tip
+                    <select name="reference" onchange="updateConstraint(this, 'f2k', ${index}, 'reference')">
+            	   ${data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === data.constraints.f2k[index].reference
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+		    Roller 
+                    <select name="slider" onchange="updateConstraint(this, 'f2k', ${index}, 'slider')">
+
+            	   ${data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === data.constraints.f2k[index].slider
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+		    Arm Base
+                    <select name="base" onchange="updateConstraint(this, 'f2k', ${index}, 'base')">
+
+            	   ${data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === data.constraints.f2k[index].base
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+                  <button onclick="deleteConstraint('f2k', ${index})">Delete</button>
+            			<input type="checkbox" oninput="data.constraints.f2k[${index}].oneway=this.checked;updateUI()" ${
+                    data.constraints.f2k[index].oneway ? "checked" : ""
+                  }></input>
+                `;
   } else if (type === "rope") {
     box.innerHTML = `Rope
                     <select name="p1" onchange="updateConstraint(this, 'rope', ${index}, 'p1')">
@@ -564,9 +622,7 @@ function createConstraintControlBox(type, index) {
                    .map(
                      (i) =>
                        `<option value="${i}" ${
-                         i === data.constraints.rope[index].p1
-                           ? "selected"
-                           : ""
+                         i === data.constraints.rope[index].p1 ? "selected" : ""
                        }>P ${i + 1}</option>`,
                    )
                    .join("")}
@@ -578,9 +634,7 @@ function createConstraintControlBox(type, index) {
                    .map(
                      (i) =>
                        `<option value="${i}" ${
-                         i === data.constraints.rope[index].p2
-                           ? "selected"
-                           : ""
+                         i === data.constraints.rope[index].p2 ? "selected" : ""
                        }>P ${i + 1}</option>`,
                    )
                    .join("")}
@@ -592,9 +646,7 @@ function createConstraintControlBox(type, index) {
                    .map(
                      (i) =>
                        `<option value="${i}" ${
-                         i === data.constraints.rope[index].p3
-                           ? "selected"
-                           : ""
+                         i === data.constraints.rope[index].p3 ? "selected" : ""
                        }>P ${i + 1}</option>`,
                    )
                    .join("")}
@@ -739,6 +791,7 @@ presets = {
     '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.3, "duration":35, "particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":346,"y":657.6332053503577,"mass":4,"hovered":false},{"x":589,"y":444.719739113931,"mass":100,"hovered":false},{"x":668,"y":673.6242863315215,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":0,"normal":{"x":0.6,"y":1},"hovered":false},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true}]}}',
   "Floating Arm Trebuchet":
     '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.3, "duration":35, "particles":[{"x":487.0140918429353,"y":517.0092960532231,"mass":1,"hovered":false},{"x":346,"y":657.6332053503577,"mass":4,"hovered":false},{"x":589,"y":444.719739113931,"mass":100,"hovered":false},{"x":589,"y":673.6242863315215,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":2,"normal":{"x":0.6,"y":0},"hovered":false},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true}]}}',
+  F2k: '{"projectile":3,"mainaxle":0,"armtip":1,"axleheight":8,"timestep":0.6,"duration":35,"particles":[{"x":454,"y":516,"mass":1,"hovered":false},{"x":436.68769591122077,"y":513.0518373240019,"mass":4,"hovered":false},{"x":560.3084834808736,"y":211.51753342999993,"mass":100,"hovered":false},{"x":652.9785163122632,"y":621.8910173174999,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":1,"p2":3,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":1,"y":1},"hovered":false},{"p":2,"normal":{"x":0.6,"y":0},"hovered":false},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true},{"p":0,"normal":{"x":0,"y":1},"hovered":false}],"colinear":[],"f2k":[{"reference":1,"slider":0,"base":2,"hovered":false}],"rope":[]}}',
   "Floating Arm Whipper":
     '{"projectile":3,"mainaxle":0,"armtip":1,"axleheight":8,"timestep":0.25,"duration":37,"particles":[{"x":496.3768762864126,"y":477.6488505996885,"mass":1,"hovered":false},{"x":677.5437773419831,"y":471.0994822534413,"mass":4,"hovered":false},{"x":468.04119394558313,"y":453.55516542833107,"mass":10,"hovered":false},{"x":557.0821854673263,"y":431.8078926373332,"mass":1,"hovered":false},{"x":563.0719502933894,"y":340.79567817868605,"mass":200,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false},{"p1":0,"p2":3,"hovered":false,"oneway":true},{"p1":0,"p2":4,"hovered":false,"oneway":true}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":4,"normal":{"x":0.6,"y":0},"hovered":false}],"colinear":[]}}',
   Whipper:
@@ -750,9 +803,8 @@ presets = {
     '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.2,"duration":40,"particles":[{"x":536,"y":472.7363315056523,"mass":1,"hovered":false},{"x":527,"y":610,"mass":4,"hovered":false},{"x":534,"y":418,"mass":10,"hovered":false},{"x":698,"y":608,"mass":1,"hovered":false},{"x":560,"y":331,"mass":200,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":false},{"p1":0,"p2":2,"hovered":false},{"p1":1,"p2":3,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":2,"normal":{"x":-0.5,"y":0},"hovered":false,"oneway":true},{"p":1,"normal":{"x":0.7,"y":0},"hovered":false,"oneway":true},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true}]}}',
   "Launch Ness Monster":
     '{"projectile":3,"mainaxle":2,"armtip":1,"axleheight":8,"timestep":0.3,"duration":80,"particles":[{"x":600.7448043997729,"y":746.2817936449396,"mass":10,"hovered":false},{"x":559.1340177888502,"y":774.0891411590661,"mass":4,"hovered":false},{"x":660.283069433465,"y":530.0270235522231,"mass":100,"hovered":false},{"x":703.9480403612703,"y":796.722427569219,"mass":1,"hovered":false},{"x":810,"y":530,"mass":10,"hovered":false},{"x":552,"y":500,"mass":10,"hovered":false},{"x":458,"y":666,"mass":10,"hovered":false},{"x":886.1112117706023,"y":662.4242110057531,"mass":10,"hovered":false}],"constraints":{"rod":[{"p1":2,"p2":1,"hovered":false},{"p1":3,"p2":1,"hovered":true},{"p1":6,"p2":5,"hovered":false},{"p1":5,"p2":2,"hovered":false},{"p1":4,"p2":2,"hovered":false},{"p1":4,"p2":7,"hovered":false},{"p1":5,"p2":4,"hovered":false}],"slider":[{"p":0,"normal":{"x":1,"y":2.1049285379913085},"hovered":false},{"p":0,"normal":{"x":-0.6,"y":1.631436664119544},"hovered":false},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true},{"p":6,"normal":{"x":0.6,"y":1},"hovered":false},{"p":6,"normal":{"x":0,"y":1},"hovered":false},{"p":7,"normal":{"x":1,"y":1},"hovered":false},{"p":7,"normal":{"x":0,"y":1},"hovered":false}],"colinear":[{"reference":1,"slider":0,"base":2}]}}',
-	"Pulley Sling":
-	"{\"projectile\":3,\"mainaxle\":0,\"armtip\":1,\"axleheight\":8,\"timestep\":0.2,\"duration\":35,\"particles\":[{\"x\":546.3996560578205,\"y\":584.3575814068853,\"mass\":1,\"hovered\":false},{\"x\":285.60825276178224,\"y\":791.6482113107999,\"mass\":4,\"hovered\":false},{\"x\":560.6373890594891,\"y\":481.2893046533675,\"mass\":10,\"hovered\":false},{\"x\":1000.9376079311984,\"y\":742.8413334783639,\"mass\":1,\"hovered\":false},{\"x\":645.5115623487806,\"y\":541.0151278114975,\"mass\":500,\"hovered\":false},{\"x\":72.74744735998127,\"y\":730.2095434891331,\"mass\":1,\"hovered\":false}],\"constraints\":{\"rod\":[{\"p1\":0,\"p2\":1,\"hovered\":true},{\"p1\":0,\"p2\":2,\"hovered\":false},{\"p1\":2,\"p2\":4,\"hovered\":false},{\"p1\":1,\"p2\":2,\"hovered\":false},{\"p1\":0,\"p2\":4,\"hovered\":false,\"oneway\":true}],\"slider\":[{\"p\":0,\"normal\":{\"x\":0,\"y\":1},\"hovered\":false},{\"p\":0,\"normal\":{\"x\":0.6,\"y\":1},\"hovered\":false},{\"p\":3,\"normal\":{\"x\":0,\"y\":1},\"hovered\":false,\"oneway\":true},{\"p\":5,\"normal\":{\"x\":1,\"y\":1},\"hovered\":false},{\"p\":5,\"normal\":{\"x\":0,\"y\":1},\"hovered\":false}],\"colinear\":[],\"rope\":[{\"p1\":5,\"p2\":1,\"hovered\":false,\"p3\":3}]}}",
-
+  "Pulley Sling":
+    '{"projectile":3,"mainaxle":0,"armtip":1,"axleheight":8,"timestep":0.2,"duration":35,"particles":[{"x":546.3996560578205,"y":584.3575814068853,"mass":1,"hovered":false},{"x":285.60825276178224,"y":791.6482113107999,"mass":4,"hovered":false},{"x":560.6373890594891,"y":481.2893046533675,"mass":10,"hovered":false},{"x":1000.9376079311984,"y":742.8413334783639,"mass":1,"hovered":false},{"x":645.5115623487806,"y":541.0151278114975,"mass":500,"hovered":false},{"x":72.74744735998127,"y":730.2095434891331,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":true},{"p1":0,"p2":2,"hovered":false},{"p1":2,"p2":4,"hovered":false},{"p1":1,"p2":2,"hovered":false},{"p1":0,"p2":4,"hovered":false,"oneway":true}],"slider":[{"p":0,"normal":{"x":0,"y":1},"hovered":false},{"p":0,"normal":{"x":0.6,"y":1},"hovered":false},{"p":3,"normal":{"x":0,"y":1},"hovered":false,"oneway":true},{"p":5,"normal":{"x":1,"y":1},"hovered":false},{"p":5,"normal":{"x":0,"y":1},"hovered":false}],"colinear":[],"rope":[{"p1":5,"p2":1,"hovered":false,"p3":3}]}}',
 };
 let optimizing = false;
 async function optimize() {
@@ -798,4 +850,52 @@ async function optimize() {
     }
   }
   drawMechanism();
+}
+function save() {
+  const data = window.data; // Assuming data is a global variable
+  const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+
+  // Ask the user for a filename
+  const filename = prompt("Enter a filename for your data:", "data.json");
+  if (!filename) {
+    alert("Save cancelled.");
+    return; // Exit if no filename is provided
+  }
+
+  const href = URL.createObjectURL(blob);
+
+  // Create a link and trigger the download
+  const link = document.createElement("a");
+  link.href = href;
+  link.download = filename; // Use the user-provided filename
+  document.body.appendChild(link);
+  link.click();
+
+  // Clean up
+  document.body.removeChild(link);
+  URL.revokeObjectURL(href);
+}
+function load() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.onchange = (e) => {
+    console.log("asf");
+    const file = e.target.files[0];
+
+    const reader = new FileReader();
+    reader.onload = (readerEvent) => {
+      try {
+        window.data = JSON.parse(readerEvent.target.result);
+        updateUI();
+      } catch (error) {
+        alert("Error parsing JSON!");
+      }
+    };
+
+    reader.readAsText(file);
+  };
+  document.body.appendChild(input);
+  console.log(input);
+  input.click();
+  document.body.removeChild(input);
 }
