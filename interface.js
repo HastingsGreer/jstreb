@@ -787,6 +787,10 @@ window.addEventListener("resize", resizeCanvas);
 window.onload = () => {
   loadMechanism();
   resizeCanvas();
+	fetch('https://apj.hgreer.com/jstreb', {
+    method: 'GET', // or 'POST' if needed
+    cache: 'no-store'
+});
 };
 presets = {
   "Hinged Counterweight":
