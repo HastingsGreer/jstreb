@@ -30,12 +30,22 @@
         export function subtract(a, b){
 		return [a[0] - b[0], a[1] - b[1]];
 	}
+        export function subtractv(a, b){
+		return new Array(a.length).fill(0).map((_, i) => {return a[i] - b[i]});
+	}
 
         export function naiveMultiply(a, b) {
             const size1 = a.length;
             const size2 = a[0].length;
             const size3 = b.length;
             const size4 = b[0].length;
+		if (size2 != size3) {
+			console.log(size2);
+			console.log(size3);
+
+
+		assert(size2 == size3);
+		}
             const result = new Array(size1).fill(0).map(() => new Array(size4).fill(0));
 
             for (let i = 0; i < size1; i++) {

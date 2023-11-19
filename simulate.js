@@ -2,7 +2,7 @@
 
 import * as math from "mathjs";
 
-import {subtract, naiveMultiply, naiveMultiplyTranspose, naiveSolve, dotDivide} from "./matrix.js"
+import {subtract, subtractv, naiveMultiply, naiveMultiplyTranspose, naiveSolve, dotDivide} from "./matrix.js"
 
 function normalize(v) {
 	var len = Math.sqrt(v[0] * v[0] + v[1] * v[1])
@@ -103,7 +103,6 @@ export function simulate(
     sys_constraints.push(new Rope(rope.p1, rope.p2, rope.p3));
   }
 
-  console.log(sys_constraints);
 
   var system = new System(
     sys_constraints,
@@ -186,11 +185,11 @@ function dvdt(system) {
     }
   });
   let constraint_forces = naiveSolve(interactions2, desires);
-  let acc = math.subtract(
-    math.dotDivide(
-      math.multiply(math.transpose(constraint_forces), interactions),
+  let acc = subtractv(
+    dotDivide(
+      naiveMultiply([constraint_forces], interactions),
     system.masses,
-    ),
+    )[0],
     system.forces,
   );
   for (var i = 0; i < constraint_forces.length; i++) {
@@ -230,7 +229,7 @@ function compute_effect_rod(rod, system) {
   );
   let result = new Array(system.positions.length).fill(0);
   pset(result, direction, rod.p2);
-  pset(result, math.multiply(-1, direction), rod.p1);
+  pset(result, [-direction[0], -direction[1]], rod.p1);
   return result;
 }
 function compute_effect_slider(slider, system) {
