@@ -416,14 +416,14 @@ function createParticleControlBox(index) {
                 <label>Y: <input type="text" min="0" max="${canvas.height}" value="${data.particles[index].y}" oninput="updateParticle(${index}, 'y', this.value)"></label>
                 <button onclick="deleteParticle(${index})">X</button>
               `;
-  box.addEventListener("mouseenter", () => {
-    data.particles[index].hovered = true;
-    drawMechanism();
-  });
-  box.addEventListener("mouseleave", () => {
-    data.particles[index].hovered = false;
-    drawMechanism();
-  });
+  //box.addEventListener("mouseenter", () => {
+  //  data.particles[index].hovered = true;
+  //  drawMechanism();
+  //});
+  //box.addEventListener("mouseleave", () => {
+  //  data.particles[index].hovered = false;
+  //  drawMechanism();
+  //});
   document.getElementById("particlesControl").appendChild(box);
 }
 function constraintExists(p1, p2) {
@@ -615,7 +615,9 @@ function createConstraintControlBox(type, index) {
                   }></input>
                 `;
   } else if (type === "rope") {
-    box.innerHTML = `Rope
+    box.innerHTML = `Rope and pulley.
+Fixed end:
+
                     <select name="p1" onchange="updateConstraint(this, 'rope', ${index}, 'p1')">
             	   ${data.particles
                    .map((_, i) => i)
@@ -627,6 +629,7 @@ function createConstraintControlBox(type, index) {
                    )
                    .join("")}
                     </select>
+		    Pulley:
                     <select name="p2" onchange="updateConstraint(this, 'rope', ${index}, 'p2')">
 
             	   ${data.particles
@@ -639,6 +642,7 @@ function createConstraintControlBox(type, index) {
                    )
                    .join("")}
                     </select>
+		    Fixed end:
                     <select name="p3" onchange="updateConstraint(this, 'rope', ${index}, 'p3')">
 
             	   ${data.particles
@@ -658,14 +662,14 @@ function createConstraintControlBox(type, index) {
                 `;
   }
 
-  box.addEventListener("mouseenter", () => {
-    data.constraints[type][index].hovered = true;
-    drawMechanism();
-  });
-  box.addEventListener("mouseleave", () => {
-    data.constraints[type][index].hovered = false;
-    drawMechanism();
-  });
+  //box.addEventListener("mouseenter", () => {
+  //  data.constraints[type][index].hovered = true;
+  //  drawMechanism();
+  //});
+  //box.addEventListener("mouseleave", () => {
+  //  data.constraints[type][index].hovered = false;
+  //  drawMechanism();
+  //});
   document.getElementById("constraintsControl").appendChild(box);
 }
 // Global variable to track the currently dragged particle, if any
@@ -783,6 +787,10 @@ window.addEventListener("resize", resizeCanvas);
 window.onload = () => {
   loadMechanism();
   resizeCanvas();
+	fetch('https://apj.hgreer.com/jstreb', {
+    method: 'GET', // or 'POST' if needed
+    cache: 'no-store'
+});
 };
 presets = {
   "Hinged Counterweight":
