@@ -345,7 +345,7 @@ function updateUI() {
   // Update Constraint Controls UI
   const constraintsControl = document.getElementById("constraintsControl");
   // Clear current constraint controls except the 'Add' buttons
-  while (constraintsControl.children.length > 4) {
+  while (constraintsControl.children.length > 5) {
     constraintsControl.removeChild(constraintsControl.lastChild);
   }
   // Re-create constraint control boxes
