@@ -14,7 +14,7 @@ async function wait() {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve();
-    }, 10); // waits for 10 milliseconds
+    }, 1); // waits for 10 milliseconds
   });
 }
 
@@ -45,8 +45,8 @@ async function doAnimate() {
 
   for (var traj of trajectories) {
     for (var i = 0; i < data.particles.length; i++) {
-      data.particles[i].x = traj._data[2 * i];
-      data.particles[i].y = traj._data[2 * i + 1];
+      data.particles[i].x = traj[2 * i];
+      data.particles[i].y = traj[2 * i + 1];
     }
     drawMechanism();
     await wait();
@@ -55,7 +55,6 @@ async function doAnimate() {
   drawMechanism();
 }
 function terminate(state) {
-  state = state._data;
   var slingx = state[2 * data.armtip] - state[2 * data.projectile];
   var slingy = state[2 * data.armtip + 1] - state[2 * data.projectile + 1];
 
@@ -94,7 +93,7 @@ function drawMechanism() {
     data.timestep > 0 &&
     typeof data.timestep === "number"
   ) {
-        //try {
+    //try {
 
     document.getElementById("range").innerText = "";
     const trajectories = simulate(
@@ -107,7 +106,6 @@ function drawMechanism() {
 
     // Draw the trajectories for the rod constraints
     trajectories.forEach((trajectory) => {
-      trajectory = trajectory._data;
       for (let i = 0; i < data.constraints.rod.length; i++) {
         if (!(data.constraints.rod[i].oneway == true)) {
           const rod = data.constraints.rod[i];
@@ -145,7 +143,6 @@ function drawMechanism() {
     var mincoord = -data.particles[data.mainaxle].y;
     var range = 0;
     for (var trajectory of trajectories) {
-      trajectory = trajectory._data;
       for (
         var part_index = 0;
         part_index < data.particles.length;
@@ -416,14 +413,14 @@ function createParticleControlBox(index) {
                 <label>Y: <input type="text" min="0" max="${canvas.height}" value="${data.particles[index].y}" oninput="updateParticle(${index}, 'y', this.value)"></label>
                 <button onclick="deleteParticle(${index})">X</button>
               `;
-  //box.addEventListener("mouseenter", () => {
-  //  data.particles[index].hovered = true;
-  //  drawMechanism();
-  //});
-  //box.addEventListener("mouseleave", () => {
-  //  data.particles[index].hovered = false;
-  //  drawMechanism();
-  //});
+  box.addEventListener("mouseenter", () => {
+    data.particles[index].hovered = true;
+    drawMechanism();
+  });
+  box.addEventListener("mouseleave", () => {
+    data.particles[index].hovered = false;
+    drawMechanism();
+  });
   document.getElementById("particlesControl").appendChild(box);
 }
 function constraintExists(p1, p2) {
@@ -662,14 +659,14 @@ Fixed end:
                 `;
   }
 
-  //box.addEventListener("mouseenter", () => {
-  //  data.constraints[type][index].hovered = true;
-  //  drawMechanism();
-  //});
-  //box.addEventListener("mouseleave", () => {
-  //  data.constraints[type][index].hovered = false;
-  //  drawMechanism();
-  //});
+  box.addEventListener("mouseenter", () => {
+    data.constraints[type][index].hovered = true;
+    drawMechanism();
+  });
+  box.addEventListener("mouseleave", () => {
+    data.constraints[type][index].hovered = false;
+    drawMechanism();
+  });
   document.getElementById("constraintsControl").appendChild(box);
 }
 // Global variable to track the currently dragged particle, if any
@@ -787,10 +784,10 @@ window.addEventListener("resize", resizeCanvas);
 window.onload = () => {
   loadMechanism();
   resizeCanvas();
-	fetch('https://apj.hgreer.com/jstreb', {
-    method: 'GET', // or 'POST' if needed
-    cache: 'no-store'
-});
+  fetch("https://apj.hgreer.com/jstreb", {
+    method: "GET", // or 'POST' if needed
+    cache: "no-store",
+  });
 };
 presets = {
   "Hinged Counterweight":
@@ -825,7 +822,8 @@ async function optimize() {
   optimizing = true;
   wait();
   console.log(document.getElementById("range").innerText);
-  var timer = 30;
+  var opt_timeout = 100;
+  var timer = opt_timeout;
   var step = 40;
   while (optimizing) {
     var oldrange = +document.getElementById("range").innerText;
@@ -836,25 +834,25 @@ async function optimize() {
         p.y = p.y + step * (0.5 - Math.random());
       }
     }
-    //for (var p of data.constraints.slider) {
-    //	if (Math.random() > .5) {
-    //	p.normal.x = p.normal.x + step / 80 * (.5 - Math.random());
-    //	p.normal.y = p.normal.y + step / 80 * (.5 - Math.random());
-    //	}
-    //}
+    for (var p of data.constraints.slider) {
+      if (Math.random() > 0.5) {
+        p.normal.x = p.normal.x + (step / 80) * (0.5 - Math.random());
+        p.normal.y = p.normal.y + (step / 80) * (0.5 - Math.random());
+      }
+    }
     drawMechanism();
     await wait();
     var newRange = +document.getElementById("range").innerText;
-    if (newRange < oldrange) {
+    if (!(newRange > oldrange)) {
       window.data = JSON.parse(oldDesign);
       document.getElementById("range").innerText = oldrange;
       timer -= 1;
       if (timer == 0) {
-        timer = 30;
+        timer = opt_timeout;
         step *= 0.6;
       }
     } else {
-      timer = 30;
+      timer = opt_timeout;
     }
   }
   drawMechanism();
