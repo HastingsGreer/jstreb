@@ -1,13 +1,15 @@
 export function naiveMultiplyTranspose(a, b) {
   const size1 = a.length;
   const size2 = a[0].length;
-  const result = new Array(size1).fill(0).map(() => new Array(size1).fill(0));
+  const result = new Array(size1).fill(0).map(() => new Array(size1));
 
   for (let i = 0; i < size1; i++) {
+    var ai = a[i];
     for (let j = 0; j < size1; j++) {
       var acc = 0;
+      var bj = b[j];
       for (let k = 0; k < size2; k++) {
-        acc += a[i][k] * b[j][k];
+        acc += ai[k] * bj[k];
       }
       result[i][j] = acc;
     }
@@ -18,29 +20,31 @@ export function naiveMultiplyTranspose(a, b) {
 export function dotDivide(a, b) {
   const size1 = a.length;
   const size2 = a[0].length;
-  const result = new Array(size1).fill(0).map(() => new Array(size2).fill(0));
+  const result = new Array(size1).fill(0).map(() => new Array(size2));
 
   for (let i = 0; i < size1; i++) {
     for (let j = 0; j < size2; j++) {
-      result[i][j] += a[i][j] / b[j];
+      result[i][j]= a[i][j] / b[j];
     }
   }
 
   return result;
 }
 export function multiply(k, v) {
-  const result = new Array(v.length).fill(0);
+  const result = new Array(v.length);
   for (var i = 0; i < v.length; i++) {
     result[i] = v[i] * k;
   }
   return result;
 }
 export function batch_add(vs) {
-  const result = new Array(vs[0].length).fill(0);
+  const result = new Array(vs[0].length);
   for (var i = 0; i < vs[0].length; i++) {
+    var acc = 0;
     for (var j = 0; j < vs.length; j++) {
-      result[i] += vs[j][i];
+      acc += vs[j][i];
     }
+	  result[i] = acc;
   }
   return result;
 }

@@ -1,16 +1,21 @@
-// Import the math.js library
-
-import * as math from "mathjs";
-
-import {subtract, subtractv, naiveMultiply, naiveMultiplyTranspose, naiveSolve, dotDivide} from "./matrix.js"
+import {
+  batch_add,
+  multiply,
+  subtract,
+  subtractv,
+  naiveMultiply,
+  naiveMultiplyTranspose,
+  naiveSolve,
+  dotDivide,
+} from "./matrix.js";
 
 function normalize(v) {
-	var len = Math.sqrt(v[0] * v[0] + v[1] * v[1])
-  return [v[0] / len, v[1] / len]
+  var len = Math.sqrt(v[0] * v[0] + v[1] * v[1]);
+  return [v[0] / len, v[1] / len];
 }
 
 function wedge(a, b) {
-  return math.subtract(math.multiply(a[0], b[1]), math.multiply(a[1], b[0]));
+  return a[0] * b[1] - a[1] * b[0];
 }
 
 function pget(array, n) {
@@ -22,7 +27,6 @@ function pset(array, v, n) {
   array[2 * n + 1] = v[1];
 }
 
-// Since we do not have types like in Julia, we will use simple objects in JavaScript
 function Rod(p1, p2, oneway) {
   this.p1 = p1;
   this.p2 = p2;
@@ -69,7 +73,7 @@ export function simulate(
   duration,
   terminate,
 ) {
-	var start = Date.now()
+  var start = Date.now();
   let masses = [];
   let positions = [];
   let sys_constraints = [];
@@ -103,19 +107,18 @@ export function simulate(
     sys_constraints.push(new Rope(rope.p1, rope.p2, rope.p3));
   }
 
-
   var system = new System(
     sys_constraints,
     masses,
     positions,
-    math.zeros(positions.length),
+    new Array(positions.length).fill(0),
   );
   system.terminate = terminate;
-  let y_0 = math.concat(system.positions, system.velocities);
+  let y_0 = system.positions.concat(system.velocities);
   let trajectory = rk4(system, y_0, timestep, duration);
-	
-	var end = Date.now();
-	document.getElementById("simtime").innerText = end - start;
+
+  var end = Date.now();
+  document.getElementById("simtime").innerText = end - start;
   return trajectory;
 }
 
@@ -128,20 +131,14 @@ function rk4(system, y_0, timestep, tfinal) {
   while (t < tfinal && !terminate) {
     t += h;
     var [k1, _] = dydt(system, y);
-    var [k2, _] = dydt(system, math.add(y, math.multiply(h / 2, k1)));
-    var [k3, _] = dydt(system, math.add(y, math.multiply(h / 2, k2)));
-    var [k4, terminate] = dydt(system, math.add(y, math.multiply(h, k3)));
+    var [k2, _] = dydt(system, batch_add([y, multiply(h / 2, k1)]));
+    var [k3, _] = dydt(system, batch_add([y, multiply(h / 2, k2)]));
+    var [k4, terminate] = dydt(system, batch_add([y, multiply(h, k3)]));
 
-    y = math.add(
+    y = batch_add([
       y,
-      math.multiply(
-        h / 6,
-        math.add(
-          k1,
-          math.add(math.multiply(2, k2), math.add(math.multiply(2, k3), k4)),
-        ),
-      ),
-    );
+      multiply(h / 6, batch_add([k1, multiply(2, k2), multiply(2, k3), k4])),
+    ]);
     output.push(y);
   }
 
@@ -188,7 +185,7 @@ function dvdt(system) {
   let acc = subtractv(
     dotDivide(
       naiveMultiply([constraint_forces], interactions),
-    system.masses,
+      system.masses,
     )[0],
     system.forces,
   );
@@ -202,8 +199,8 @@ function dvdt(system) {
   return [acc, false];
 }
 function dydt(system, y) {
-  system.positions = y._data.slice(0, system.positions.length);
-  system.velocities = y._data.slice(system.positions.length, y.length);
+  system.positions = y.slice(0, system.positions.length);
+  system.velocities = y.slice(system.positions.length, y.length);
   let [dv, terminate] = dvdt(system);
   if (system.terminate(y)) {
     for (var i = 0; i < system.constraints.length; i++) {
@@ -217,15 +214,12 @@ function dydt(system, y) {
       }
     }
   }
-  return [math.concat(system.velocities, dv), false];
+  return [system.velocities.concat(dv), false];
 }
 
 function compute_effect_rod(rod, system) {
   let direction = normalize(
-    subtract(
-      pget(system.positions, rod.p1),
-      pget(system.positions, rod.p2),
-    ),
+    subtract(pget(system.positions, rod.p1), pget(system.positions, rod.p2)),
   );
   let result = new Array(system.positions.length).fill(0);
   pset(result, direction, rod.p2);
@@ -253,20 +247,14 @@ function compute_acceleration_rod(rod, system) {
 }
 function compute_effect_rope(rope, system) {
   let direction = normalize(
-    subtract(
-      pget(system.positions, rope.p1),
-      pget(system.positions, rope.p2),
-    ),
+    subtract(pget(system.positions, rope.p1), pget(system.positions, rope.p2)),
   );
   let direction1 = normalize(
-    subtract(
-      pget(system.positions, rope.p2),
-      pget(system.positions, rope.p3),
-    ),
+    subtract(pget(system.positions, rope.p2), pget(system.positions, rope.p3)),
   );
   let result = new Array(system.positions.length).fill(0);
-  pset(result, math.multiply(-1, direction), rope.p1);
-  pset(result, math.add(direction, math.multiply(-1, direction1)), rope.p2);
+  pset(result, [-direction[0], -direction[1]], rope.p1);
+  pset(result, subtract(direction, direction1), rope.p2);
   pset(result, direction1, rope.p3);
   return result;
 }
@@ -279,7 +267,7 @@ function compute_acceleration_rope(rod, system) {
     pget(system.velocities, rod.p1),
     pget(system.velocities, rod.p2),
   );
-  let l = math.sqrt(math.sum(math.dotMultiply(r, r)));
+  let l = Math.sqrt(r[0] * r[0] + r[1] * r[1]);
   let r1 = subtract(
     pget(system.positions, rod.p2),
     pget(system.positions, rod.p3),
@@ -288,7 +276,7 @@ function compute_acceleration_rope(rod, system) {
     pget(system.velocities, rod.p2),
     pget(system.velocities, rod.p3),
   );
-  let l1 = math.sqrt(math.sum(math.dotMultiply(r1, r1)));
+  let l1 = Math.sqrt(r1[0] * r1[0] + r1[1] * r1[1]);
 
   return (
     Math.pow(wedge(r, v), 2) / (l * l * l) +
@@ -296,7 +284,8 @@ function compute_acceleration_rope(rod, system) {
   );
 }
 function compute_acceleration_slider(slider, system) {
-  return math.sum(math.dotMultiply(pget(system.forces, slider.p), slider.n));
+  var f = pget(system.forces, slider.p);
+  return slider.n[0] * f[0] + slider.n[1] * f[1];
 }
 
 function compute_effect_colinear(colinear, system) {
