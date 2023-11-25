@@ -17,6 +17,13 @@ async function wait() {
     }, 1); // waits for 10 milliseconds
   });
 }
+async function waitForAnimationFrame() {
+    await new Promise(resolve => {
+        requestAnimationFrame(() => {
+            resolve();
+        });
+    });
+}
 
 async function doAnimate() {
   if (window.data.timestep == 0) {
@@ -49,7 +56,7 @@ async function doAnimate() {
       data.particles[i].y = traj[2 * i + 1];
     }
     drawMechanism();
-    await wait();
+    await waitForAnimationFrame();
   }
   window.data = JSON.parse(reset);
   drawMechanism();
