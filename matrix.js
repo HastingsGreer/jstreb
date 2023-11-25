@@ -24,7 +24,7 @@ export function dotDivide(a, b) {
 
   for (let i = 0; i < size1; i++) {
     for (let j = 0; j < size2; j++) {
-      result[i][j]= a[i][j] / b[j];
+      result[i][j] = a[i][j] / b[j];
     }
   }
 
@@ -44,7 +44,7 @@ export function batch_add(vs) {
     for (var j = 0; j < vs.length; j++) {
       acc += vs[j][i];
     }
-	  result[i] = acc;
+    result[i] = acc;
   }
   return result;
 }

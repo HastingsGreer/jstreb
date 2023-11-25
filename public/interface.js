@@ -73,11 +73,11 @@ function terminate(state) {
   var wedge = armx * slingy - slingx * army;
 
   //return armx * slingy - slingx * army < 0;
-	//rr
+  //rr
   var vx = state[2 * data.projectile + 2 * data.particles.length];
-  var vy = state[2 * data.projectile + 2 * data.particles.length + 1 ];
-	console.log(vx);
-	return vx > 40 && vy > -15;
+  var vy = state[2 * data.projectile + 2 * data.particles.length + 1];
+  console.log(vx);
+  return vx > 40 && vy > -15;
 }
 
 function drawMechanism() {
