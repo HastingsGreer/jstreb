@@ -204,11 +204,12 @@ function dydt(system, y) {
   system.velocities = y.slice(system.positions.length, y.length);
   let [dv, terminate] = dvdt(system);
   if (system.terminate(y)) {
+	  var proj = window.data.projectile;
     for (var i = 0; i < system.constraints.length; i++) {
       if (
-        system.constraints[i].p1 === 3 ||
-        system.constraints[i].p2 === 3 ||
-        system.constraints[i].p3 === 3
+        system.constraints[i].p1 === proj ||
+        system.constraints[i].p2 === proj ||
+        system.constraints[i].p3 === proj
       ) {
         system.constraints.splice(i, 1);
         break;
