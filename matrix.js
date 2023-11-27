@@ -23,8 +23,10 @@ export function dotDivide(a, b) {
   const result = new Array(size1).fill(0).map(() => new Array(size2));
 
   for (let i = 0; i < size1; i++) {
+	  let ri = result[i];
+	  let ai = a[i];
     for (let j = 0; j < size2; j++) {
-      result[i][j] = a[i][j] / b[j];
+      ri[j] = ai[j] / b[j];
     }
   }
 
