@@ -1,4 +1,4 @@
-import {simulate} from "./simulate.js";
+import { simulate } from "./simulate.js";
 const canvas = document.getElementById("mechanism");
 const ctx = canvas.getContext("2d");
 window.data = {
@@ -19,11 +19,11 @@ async function wait() {
   });
 }
 async function waitForAnimationFrame() {
-    await new Promise(resolve => {
-        requestAnimationFrame(() => {
-            resolve();
-        });
+  await new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      resolve();
     });
+  });
 }
 
 async function doAnimate() {
@@ -40,7 +40,10 @@ async function doAnimate() {
   );
 
   window.data.timestep = 0;
-  for (var constraintType of [window.data.constraints.rod, window.data.constraints.slider]) {
+  for (var constraintType of [
+    window.data.constraints.rod,
+    window.data.constraints.slider,
+  ]) {
     var limit = constraintType.length;
     for (var i = 0; i < limit; i++) {
       if (constraintType[i].oneway) {
@@ -63,8 +66,10 @@ async function doAnimate() {
   drawMechanism();
 }
 function terminate(state) {
-  var slingx = state[2 * window.data.armtip] - state[2 * window.data.projectile];
-  var slingy = state[2 * window.data.armtip + 1] - state[2 * window.data.projectile + 1];
+  var slingx =
+    state[2 * window.data.armtip] - state[2 * window.data.projectile];
+  var slingy =
+    state[2 * window.data.armtip + 1] - state[2 * window.data.projectile + 1];
 
   var norms = Math.sqrt(slingx * slingx + slingy * slingy);
 
@@ -72,7 +77,8 @@ function terminate(state) {
   slingy = slingy / norms;
 
   var armx = state[2 * window.data.armtip] - state[2 * window.data.mainaxle];
-  var army = state[2 * window.data.armtip + 1] - state[2 * window.data.mainaxle + 1];
+  var army =
+    state[2 * window.data.armtip + 1] - state[2 * window.data.mainaxle + 1];
   var norma = Math.sqrt(armx * armx + army * army);
 
   armx /= norma;
@@ -83,55 +89,65 @@ function terminate(state) {
   //return armx * slingy - slingx * army < 0;
   //rr
   var vx = state[2 * window.data.projectile + 2 * window.data.particles.length];
-  var vy = state[2 * window.data.projectile + 2 * window.data.particles.length + 1];
+  var vy =
+    state[2 * window.data.projectile + 2 * window.data.particles.length + 1];
   return vx > 40 && vy > -15;
 }
 function simulate_and_range() {
-    const trajectories = simulate(
-      window.data.particles,
-      window.data.constraints,
-      window.data.timestep,
-      window.data.duration,
-      terminate,
-    );
-    var axlecoord = -window.data.particles[window.data.mainaxle].y;
-    var mincoord = -window.data.particles[window.data.mainaxle].y;
-    var range = 0;
-    for (var trajectory of trajectories) {
-      for (
-        var part_index = 0;
-        part_index < window.data.particles.length;
-        part_index++
-      ) {
-        if (trajectory[2 * part_index] < 2000) {
-          mincoord = Math.min(mincoord, -trajectory[2 * part_index + 1]);
-        }
-        axlecoord = Math.max(axlecoord, -trajectory[2 * window.data.mainaxle + 1]);
+  const trajectories = simulate(
+    window.data.particles,
+    window.data.constraints,
+    window.data.timestep,
+    window.data.duration,
+    terminate,
+  );
+  var axlecoord = -window.data.particles[window.data.mainaxle].y;
+  var mincoord = -window.data.particles[window.data.mainaxle].y;
+  var range = 0;
+  for (var trajectory of trajectories) {
+    for (
+      var part_index = 0;
+      part_index < window.data.particles.length;
+      part_index++
+    ) {
+      if (trajectory[2 * part_index] < 2000) {
+        mincoord = Math.min(mincoord, -trajectory[2 * part_index + 1]);
       }
-
-      range = Math.max(
-        range,
-        2 *
-          Math.max(
-            0,
-            -trajectory[2 * window.data.particles.length + 2 * window.data.projectile + 1],
-          ) *
-          trajectory[2 * window.data.particles.length + 2 * window.data.projectile],
+      axlecoord = Math.max(
+        axlecoord,
+        -trajectory[2 * window.data.mainaxle + 1],
       );
     }
-    var height1 = axlecoord - mincoord;
-    var height2 = Math.sqrt(
-      Math.pow(
-        window.data.particles[window.data.armtip].x - window.data.particles[window.data.mainaxle].x,
-        2,
-      ) +
-        Math.pow(
-          window.data.particles[window.data.armtip].y - window.data.particles[window.data.projectile].y,
-          2,
-        ),
+
+    range = Math.max(
+      range,
+      2 *
+        Math.max(
+          0,
+          -trajectory[
+            2 * window.data.particles.length + 2 * window.data.projectile + 1
+          ],
+        ) *
+        trajectory[
+          2 * window.data.particles.length + 2 * window.data.projectile
+        ],
     );
-      range = (range / Math.max(height1, 0.75 * height2)) * window.data.axleheight;
-	return [trajectories, range];
+  }
+  var height1 = axlecoord - mincoord;
+  var height2 = Math.sqrt(
+    Math.pow(
+      window.data.particles[window.data.armtip].x -
+        window.data.particles[window.data.mainaxle].x,
+      2,
+    ) +
+      Math.pow(
+        window.data.particles[window.data.armtip].y -
+          window.data.particles[window.data.projectile].y,
+        2,
+      ),
+  );
+  range = (range / Math.max(height1, 0.75 * height2)) * window.data.axleheight;
+  return [trajectories, range];
 }
 
 function drawMechanism() {
@@ -148,7 +164,8 @@ function drawMechanism() {
   ctx.restore();
   if (
     window.data.particles.length > 1 &&
-    window.data.constraints.rod.length + window.data.constraints.slider.length > 1 &&
+    window.data.constraints.rod.length + window.data.constraints.slider.length >
+      1 &&
     window.data.timestep > 0 &&
     typeof window.data.timestep === "number"
   ) {
@@ -227,6 +244,19 @@ function drawMechanism() {
     ctx.strokeStyle = c.hovered ? "blue" : "black"; // Change stroke style if hovered
     ctx.stroke();
   });
+  window.data.constraints.rope.forEach((c) => {
+    const p1 = window.data.particles[c.p1];
+    const p2 = window.data.particles[c.p2];
+    const p3 = window.data.particles[c.p3];
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.lineTo(p3.x, p3.y);
+    ctx.strokeStyle = c.hovered ? "blue" : "black"; // Change stroke style if hovered
+    ctx.stroke();
+    ctx.setLineDash([]);
+  });
 
   // Draw sliders
   window.data.constraints.slider.forEach((c) => {
@@ -245,6 +275,28 @@ function drawMechanism() {
     ctx.strokeStyle = c.hovered ? "red" : "black"; // Change stroke style if hovered
     ctx.stroke();
   });
+
+  window.data.constraints.colinear
+    .concat(window.data.constraints.f2k)
+    .forEach((c) => {
+      const base = window.data.particles[c.base];
+      const reference = window.data.particles[c.reference];
+      const slider = window.data.particles[c.slider];
+      const length = Math.sqrt(
+        (base.x - reference.x) * (base.x - reference.x) +
+          (base.y - reference.y) * (base.y - reference.y),
+      );
+
+      const sx = (base.x - reference.x) / length;
+      const sy = (base.y - reference.y) / length;
+
+      const r = Math.abs(sx * (base.y - slider.y) - sy * (base.x - slider.x));
+      ctx.beginPath();
+      ctx.arc(slider.x, slider.y, r, 0, Math.PI * 2);
+      ctx.strokeStyle = "grey";
+
+      ctx.stroke();
+    });
 
   // Reset line width to default if needed elsewhere
   ctx.lineWidth = 1;
@@ -350,7 +402,9 @@ function updateUI() {
     particlesControl.removeChild(particlesControl.lastChild);
   }
   // Re-create particle control boxes
-  window.data.particles.forEach((particle, index) => createParticleControlBox(index));
+  window.data.particles.forEach((particle, index) =>
+    createParticleControlBox(index),
+  );
 
   // Update Constraint Controls UI
   const constraintsControl = document.getElementById("constraintsControl");
@@ -465,13 +519,17 @@ function createConstraintControlBox(type, index) {
                    .map((_, i) => i)
                    .filter(
                      (i) =>
-                       !constraintExists(window.data.constraints.rod[index].p2, i) ||
-                       i == window.data.constraints.rod[index].p1,
+                       !constraintExists(
+                         window.data.constraints.rod[index].p2,
+                         i,
+                       ) || i == window.data.constraints.rod[index].p1,
                    )
                    .map(
                      (i) =>
                        `<option value="${i}" ${
-                         i === window.data.constraints.rod[index].p1 ? "selected" : ""
+                         i === window.data.constraints.rod[index].p1
+                           ? "selected"
+                           : ""
                        }>P ${i + 1}</option>`,
                    )
                    .join("")}
@@ -481,13 +539,17 @@ function createConstraintControlBox(type, index) {
                    .map((_, i) => i)
                    .filter(
                      (i) =>
-                       !constraintExists(window.data.constraints.rod[index].p1, i) ||
-                       i == window.data.constraints.rod[index].p2,
+                       !constraintExists(
+                         window.data.constraints.rod[index].p1,
+                         i,
+                       ) || i == window.data.constraints.rod[index].p2,
                    )
                    .map(
                      (i) =>
                        `<option value="${i}" ${
-                         i === window.data.constraints.rod[index].p2 ? "selected" : ""
+                         i === window.data.constraints.rod[index].p2
+                           ? "selected"
+                           : ""
                        }>P ${i + 1}</option>`,
                    )
                    .join("")}
@@ -521,7 +583,9 @@ function createConstraintControlBox(type, index) {
                   }" oninput="updateConstraint(this, 'slider', ${index}, 'normalY')"></label>
                   <button onclick="deleteConstraint('slider', ${index})">Delete</button>
             			<input type="checkbox" oninput="window.data.constraints.slider[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints.slider[index].oneway ? "checked" : ""
+                    window.data.constraints.slider[index].oneway
+                      ? "checked"
+                      : ""
                   }></input>
                 `;
   } else if (type === "colinear") {
@@ -571,7 +635,9 @@ function createConstraintControlBox(type, index) {
                     </select>
                   <button onclick="deleteConstraint('colinear', ${index})">Delete</button>
             			<input type="checkbox" oninput="window.data.constraints.colinear[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints.colinear[index].oneway ? "checked" : ""
+                    window.data.constraints.colinear[index].oneway
+                      ? "checked"
+                      : ""
                   }></input>
                 `;
   } else if (type === "f2k") {
@@ -634,7 +700,9 @@ Fixed end:
                    .map(
                      (i) =>
                        `<option value="${i}" ${
-                         i === window.data.constraints.rope[index].p1 ? "selected" : ""
+                         i === window.data.constraints.rope[index].p1
+                           ? "selected"
+                           : ""
                        }>P ${i + 1}</option>`,
                    )
                    .join("")}
@@ -647,7 +715,9 @@ Fixed end:
                    .map(
                      (i) =>
                        `<option value="${i}" ${
-                         i === window.data.constraints.rope[index].p2 ? "selected" : ""
+                         i === window.data.constraints.rope[index].p2
+                           ? "selected"
+                           : ""
                        }>P ${i + 1}</option>`,
                    )
                    .join("")}
@@ -660,7 +730,9 @@ Fixed end:
                    .map(
                      (i) =>
                        `<option value="${i}" ${
-                         i === window.data.constraints.rope[index].p3 ? "selected" : ""
+                         i === window.data.constraints.rope[index].p3
+                           ? "selected"
+                           : ""
                        }>P ${i + 1}</option>`,
                    )
                    .join("")}
@@ -801,8 +873,8 @@ window.onload = () => {
   //  method: "GET", // or 'POST' if needed
   //  cache: "no-store",
   //});
-  optimize();
-	setTimeout(optimize, 1000);
+  //optimize();
+  //	setTimeout(optimize, 1000);
 };
 presets = {
   "Hinged Counterweight":
@@ -831,17 +903,17 @@ async function optimize() {
   if (optimizing) {
     optimizing = false;
     document.getElementById("optimize").innerText = "Optimize";
-	  console.log(iterations);
+    console.log(iterations);
     return;
   }
   document.getElementById("optimize").innerText = "Stop";
   optimizing = true;
   //wait();
-  var opt_timeout = 100;
+  var opt_timeout = 500;
   var timer = opt_timeout;
   var step = 40;
   while (optimizing) {
-	  iterations += 1;
+    iterations += 1;
     var oldrange = +document.getElementById("range").innerText;
     var oldDesign = JSON.stringify(window.data);
     for (var p of window.data.particles) {
@@ -850,16 +922,16 @@ async function optimize() {
         p.y = p.y + step * (0.5 - Math.random());
       }
     }
-    for (var p of window.data.constraints.slider) {
-      if (Math.random() > 0.5) {
-        p.normal.x = p.normal.x + (step / 80) * (0.5 - Math.random());
-        p.normal.y = p.normal.y + (step / 80) * (0.5 - Math.random());
-      }
+    //for (var p of window.data.constraints.slider) {
+    //  if (Math.random() > 0.5) {
+    //    p.normal.x = p.normal.x + (step / 80) * (0.5 - Math.random());
+    //    p.normal.y = p.normal.y + (step / 80) * (0.5 - Math.random());
+    //  }
+    //}
+    var [_, range] = simulate_and_range();
+    if (timer % 20 == 0) {
+      await wait();
     }
-	  var [_, range] = simulate_and_range();
-	  if (timer % 20 == 0) {
-    await wait();
-	  }
     var newRange = range;
     if (!(newRange > oldrange)) {
       window.data = JSON.parse(oldDesign);
@@ -870,16 +942,21 @@ async function optimize() {
       }
     } else {
       timer = opt_timeout;
-	    drawMechanism();
+      drawMechanism();
     }
   }
   drawMechanism();
 }
 function save() {
-  const blob = new Blob([JSON.stringify(window.data)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(window.data)], {
+    type: "application/json",
+  });
 
   // Ask the user for a filename
-  const filename = prompt("Enter a filename for your window.data:", "window.data.json");
+  const filename = prompt(
+    "Enter a filename for your window.data:",
+    "window.data.json",
+  );
   if (!filename) {
     alert("Save cancelled.");
     return; // Exit if no filename is provided
@@ -921,24 +998,24 @@ function load() {
   input.click();
   document.body.removeChild(input);
 }
-window.doAnimate = doAnimate
-window.terminate = terminate 
-window.drawMechanism = drawMechanism 
-window.createParticle = createParticle 
-window.updateParticle = updateParticle 
-window.deleteParticle = deleteParticle 
-window.createConstraint = createConstraint 
-window.updateConstraint = updateConstraint 
-window.deleteConstraint = deleteConstraint 
-window.resizeCanvas = resizeCanvas 
-window.updateUI = updateUI 
-window.loadPreset = loadPreset 
-window.createParticleControlBox = createParticleControlBox 
-window.constraintExists = constraintExists 
-window.createConstraintControlBox = createConstraintControlBox 
-window.getParticleAtPosition = getParticleAtPosition 
-window.saveMechanism = saveMechanism 
-window.loadMechanism = loadMechanism 
-window.optimize = optimize 
-window.save = save 
-window.load = load 
+window.doAnimate = doAnimate;
+window.terminate = terminate;
+window.drawMechanism = drawMechanism;
+window.createParticle = createParticle;
+window.updateParticle = updateParticle;
+window.deleteParticle = deleteParticle;
+window.createConstraint = createConstraint;
+window.updateConstraint = updateConstraint;
+window.deleteConstraint = deleteConstraint;
+window.resizeCanvas = resizeCanvas;
+window.updateUI = updateUI;
+window.loadPreset = loadPreset;
+window.createParticleControlBox = createParticleControlBox;
+window.constraintExists = constraintExists;
+window.createConstraintControlBox = createConstraintControlBox;
+window.getParticleAtPosition = getParticleAtPosition;
+window.saveMechanism = saveMechanism;
+window.loadMechanism = loadMechanism;
+window.optimize = optimize;
+window.save = save;
+window.load = load;
