@@ -859,7 +859,11 @@ function loadMechanism() {
   const savedData = localStorage.getItem("mechanismData");
   if (savedData) {
     window.data = JSON.parse(savedData);
-    updateUI();
+    try {
+      updateUI();
+    } catch {
+      loadPreset({ value: "Hinged Counterweight" });
+    }
   } else {
     loadPreset({ value: "Hinged Counterweight" });
   }
@@ -876,7 +880,7 @@ window.onload = () => {
   //optimize();
   //	setTimeout(optimize, 1000);
 };
-presets = {
+var presets = {
   "Hinged Counterweight":
     '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.3, "duration":35, "particles":[{"x":536,"y":472.7,"mass":1},{"x":346,"y":657.6,"mass":4},{"x":588,"y":440.7,"mass":10},{"x":668,"y":673.6,"mass":1},{"x":586,"y":533.7,"mass":100}],"constraints":{"rod":[{"p1":0,"p2":1},{"p1":0,"p2":2},{"p1":1,"p2":3},{"p1":2,"p2":4},{"p1":1,"p2":2}],"slider":[{"p":0,"normal":{"x":0,"y":1}},{"p":0,"normal":{"x":0.6,"y":1}},{"p":3,"normal":{"x":0,"y":1},"oneway":true}]}}',
   "Fixed Counterweight":
