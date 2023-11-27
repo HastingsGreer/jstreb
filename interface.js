@@ -458,7 +458,7 @@ function updateUI() {
   document.getElementById("axleheight").value = window.data.axleheight;
 }
 function loadPreset(element) {
-  window.data = JSON.parse(window.presets[element.value]);
+  window.data = JSON.parse(presets[element.value]);
   if (window.data.constraints.colinear === undefined) {
     window.data.constraints.colinear = [];
   }
