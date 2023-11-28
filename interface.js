@@ -162,6 +162,7 @@ function drawMechanism() {
 
   // Restore the original state which contains our zoom and pan settings
   ctx.restore();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (
     window.data.particles.length > 1 &&
     window.data.constraints.rod.length + window.data.constraints.slider.length >
@@ -352,7 +353,7 @@ function createConstraint(type) {
     constraint = { reference: 0, slider: 1, base: 2 };
     window.data.constraints.f2k.push(constraint);
   } else if (type === "rope") {
-    constraint = { p1: 0, p2: 1, p2: 3 };
+    constraint = { p1: 0, p2: 1, p3: 2 };
     window.data.constraints.rope.push(constraint);
   } else {
     console.error("Unknown constraint type:", type);
@@ -384,8 +385,19 @@ function deleteConstraint(type, index) {
 }
 
 function resizeCanvas() {
-  canvas.width = window.innerWidth - 600; // 300px for each control column
-  canvas.height = window.innerHeight;
+  var width = 600; //window.innerWidth - 600; // 300px for each control column
+  //	console.log(canvas.width);
+  var height = 600; //window.innerHeight;
+  var devicePixelRatio = 2;
+
+  canvas.width = width * devicePixelRatio;
+  canvas.height = height * devicePixelRatio;
+
+  // ensure all drawing operations are scaled
+
+  // scale everything down using CSS
+  canvas.style.width = width + "px";
+  canvas.style.height = height + "px";
   updateUI();
 }
 
@@ -785,41 +797,41 @@ canvas.addEventListener("mousedown", function (event) {
     startY = event.clientY - canvas.offsetTop;
   }
 });
-let zoomLevel = 1;
-const ZOOM_SENSITIVITY = 0.001;
-
-canvas.addEventListener("wheel", function (event) {
-  event.preventDefault();
-  zoomLevel += event.deltaY * -ZOOM_SENSITIVITY;
-  zoomLevel = Math.min(Math.max(0.125, zoomLevel), 4); // Clamp between 0.125x and 4x
-  ctx.setTransform(zoomLevel, 0, 0, zoomLevel, 0, 0);
-  drawMechanism(); // You will need to redraw the canvas content
-});
-
-let isPanning = false;
-let startX = 0,
-  startY = 0;
-
-canvas.addEventListener("mousemove", function (event) {
-  if (isPanning) {
-    const x = event.clientX - canvas.offsetLeft;
-    const y = event.clientY - canvas.offsetTop;
-    const dx = x - startX;
-    const dy = y - startY;
-    ctx.translate(dx, dy);
-    drawMechanism(); // Redraw the canvas content
-    startX = x;
-    startY = y;
-  }
-});
-
-canvas.addEventListener("mouseup", function (event) {
-  isPanning = false;
-});
-
-canvas.addEventListener("mouseleave", function (event) {
-  isPanning = false;
-});
+//let zoomLevel = 1;
+//const ZOOM_SENSITIVITY = 0.001;
+//
+//canvas.addEventListener("wheel", function (event) {
+//  event.preventDefault();
+//  zoomLevel += event.deltaY * -ZOOM_SENSITIVITY;
+//  zoomLevel = Math.min(Math.max(0.125, zoomLevel), 4); // Clamp between 0.125x and 4x
+//  ctx.setTransform(zoomLevel, 0, 0, zoomLevel, 0, 0);
+//  drawMechanism(); // You will need to redraw the canvas content
+//});
+//
+//let isPanning = false;
+//let startX = 0,
+//  startY = 0;
+//
+//canvas.addEventListener("mousemove", function (event) {
+//  if (isPanning) {
+//    const x = event.clientX - canvas.offsetLeft;
+//    const y = event.clientY - canvas.offsetTop;
+//    const dx = x - startX;
+//    const dy = y - startY;
+//    ctx.translate(dx, dy);
+//    drawMechanism(); // Redraw the canvas content
+//    startX = x;
+//    startY = y;
+//  }
+//});
+//
+//canvas.addEventListener("mouseup", function (event) {
+//  isPanning = false;
+//});
+//
+//canvas.addEventListener("mouseleave", function (event) {
+//  isPanning = false;
+//});
 canvas.addEventListener("mousemove", function (event) {
   if (draggedParticleIndex !== null) {
     const rect = canvas.getBoundingClientRect();
@@ -856,7 +868,8 @@ function saveMechanism() {
 }
 
 function loadMechanism() {
-  const savedData = localStorage.getItem("mechanismData");
+  const savedData = 0;
+  localStorage.getItem("mechanismData");
   if (savedData) {
     window.data = JSON.parse(savedData);
     try {

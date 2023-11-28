@@ -8,48 +8,51 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <canvas id="mechanism"></canvas>
-    <div>
-      <div id="headerControl">
-        <select id="presets" onchange="loadPreset(this)">
-          <option>Presets</option>
-        </select>
+    <div id="headerControl">
+      <select id="presets" onchange="loadPreset(this)">
+        <option>Presets</option>
+      </select>
 
-        <button onclick="doAnimate()">Play</button>
-        <button id="optimize" onclick="optimize()">Optimize</button>
-        <button id="load" onclick="load()">Load</button>
-        <button id="save" onclick="save()">Save</button>
-        Timestep<input
-          id="timestep"
-          type="text"
-          oninput="data.timestep=+this.value;drawMechanism()"
-        />Duration<input
-          type="text"
-          oninput="data.duration=+this.value;drawMechanism()"
-          id="duration"
-        />
-        Main Axle<select
-          id="mainaxle"
-          onchange="data.mainaxle=+this.value;drawMechanism()"
-        ></select>
-        Projectile<select
-          id="projectile"
-          onchange="data.projectile=+this.value;drawMechanism()"
-        ></select>
-        Arm Tip<select
-          id="armtip"
-          onchange="data.armtip=+this.value;drawMechanism()"
-        ></select>
-        Main Axle Height:<input
-          id="axleheight"
-          onchange="data.axleheight=+this.value;drawMechanism()"
-        /><br />
-        Range:
-        <div id="range"></div>
-        Simtime:
-        <div id="simtime"></div>
-        <a href="https://www.hgreer.com/TrebuchetSimulator">Back to Blog</a>
-      </div>
+      <button onclick="doAnimate()">Play</button>
+      <button id="optimize" onclick="optimize()">Optimize</button>
+      <button id="load" onclick="load()">Load</button>
+      <button id="save" onclick="save()">Save</button>
+      <br />
+      Timestep<input
+        id="timestep"
+        type="text"
+        oninput="data.timestep=+this.value;drawMechanism()"
+      />Duration<input
+        type="text"
+        oninput="data.duration=+this.value;drawMechanism()"
+        id="duration"
+      />
+      Main Axle<select
+        id="mainaxle"
+        onchange="data.mainaxle=+this.value;drawMechanism()"
+      ></select>
+      Projectile<select
+        id="projectile"
+        onchange="data.projectile=+this.value;drawMechanism()"
+      ></select>
+      Arm Tip<select
+        id="armtip"
+        onchange="data.armtip=+this.value;drawMechanism()"
+      ></select>
+      Main Axle Height:<input
+        id="axleheight"
+        onchange="data.axleheight=+this.value;drawMechanism()"
+        type="text"
+      />
+      <br />
+      Range:
+      <span id="range"></span>
+      Simtime:
+      <span id="simtime"></span>
+      <a href="https://www.hgreer.com/TrebuchetSimulator">Back to Blog</a>
+    </div>
+    <div id="app">
+      <canvas id="mechanism"></canvas>
       <div id="allcontrols">
         <div id="particlesControl">
           <button onclick="createParticle()">Add Particle</button>

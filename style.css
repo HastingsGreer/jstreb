@@ -1,27 +1,16 @@
-body {
+#app {
   display: flex;
-  height: 100vh;
-  margin: 0;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f4f4f4;
-  color: #333;
+  flex-direction: row;
+  flex-wrap: wrap;
 }
-#mechanism {
-  flex: 1;
-  background: #fff;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+input[type="text"] {
+  width: 50px;
 }
-#allcontrols {
-  width: 600px;
-  display: flex;
-}
-#headerControl {
-  width: 600 px;
+input[type="range"] {
+  width: 100px;
 }
 #particlesControl,
 #constraintsControl {
-  width: 300px;
-  overflow-y: auto;
   background: #fff;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   padding: 2px;
@@ -45,21 +34,4 @@ button {
 }
 button:hover {
   background-color: #3949ab;
-}
-label {
-  margin: 5px 0;
-}
-input[type="range"] {
-  width: 60%;
-}
-input[type="text"] {
-  width: 50px;
-}
-select {
-  padding: 5px;
-  border-radius: 4px;
-  width: calc(30% - 10px);
-}
-canvas {
-  display: block; /* Removes the bottom margin/gap */
 }
