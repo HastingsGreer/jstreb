@@ -84,10 +84,7 @@ function terminate(state) {
   armx /= norma;
   army /= norma;
 
-  var wedge = armx * slingy - slingx * army;
-
   //return armx * slingy - slingx * army < 0;
-  //rr
   var vx = state[2 * window.data.projectile + 2 * window.data.particles.length];
   var vy =
     state[2 * window.data.projectile + 2 * window.data.particles.length + 1];
@@ -193,13 +190,15 @@ function drawMechanism() {
         if (!(window.data.constraints.rope[i].oneway == true)) {
           const rope = window.data.constraints.rope[i];
           const p1Index = rope.p1 * 2; // Index in trajectory array for p1.x and p1.y
-          const p2Index = rope.p2 * 2; // Index in trajectory array for p2.x and p2.y
           const p3Index = rope.p3 * 2; // Index in trajectory array for p2.x and p2.y
 
           // Draw the line for the rope's trajectory
           ctx.beginPath();
           ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
-          ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
+          for (var pulley of window.data.constraints.rope[i].pulleys) {
+            var p2Index = pulley.idx * 2;
+            ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
+          }
           ctx.lineTo(trajectory[p3Index], trajectory[p3Index + 1]);
           ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
           ctx.stroke();
@@ -242,19 +241,21 @@ function drawMechanism() {
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = c.hovered ? "blue" : "black"; // Change stroke style if hovered
+    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
     ctx.stroke();
   });
   window.data.constraints.rope.forEach((c) => {
     const p1 = window.data.particles[c.p1];
-    const p2 = window.data.particles[c.p2];
     const p3 = window.data.particles[c.p3];
     ctx.setLineDash([8, 8]);
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
+    for (var pulley of c.pulleys) {
+      const p2 = window.data.particles[pulley.idx];
+      ctx.lineTo(p2.x, p2.y);
+    }
     ctx.lineTo(p3.x, p3.y);
-    ctx.strokeStyle = c.hovered ? "blue" : "black"; // Change stroke style if hovered
+    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
     ctx.stroke();
     ctx.setLineDash([]);
   });
@@ -273,7 +274,7 @@ function drawMechanism() {
       p.x + sliderLength * Math.cos(angle),
       p.y + sliderLength * Math.sin(angle),
     );
-    ctx.strokeStyle = c.hovered ? "red" : "black"; // Change stroke style if hovered
+    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
     ctx.stroke();
   });
 
@@ -320,7 +321,6 @@ function deleteParticle(index) {
   updateUI();
 }
 function createConstraint(type) {
-  const index = window.data.constraints[type].length;
   let constraint = {};
 
   // Depending on the type, create a different constraint
@@ -353,12 +353,31 @@ function createConstraint(type) {
     constraint = { reference: 0, slider: 1, base: 2 };
     window.data.constraints.f2k.push(constraint);
   } else if (type === "rope") {
-    constraint = { p1: 0, p2: 1, p3: 2 };
+    constraint = { p1: 0, pulleys: [], p3: 2 };
     window.data.constraints.rope.push(constraint);
   } else {
     console.error("Unknown constraint type:", type);
     return;
   }
+  updateUI();
+}
+function updatePulley(element, index, pulleyindex) {
+  const value = +element.value;
+  const constraint = window.data.constraints.rope[index];
+  constraint.pulleys[pulleyindex].idx = value;
+  updateUI();
+}
+function updatePulleyDirection(element, index, pulleyindex) {
+  const value = element.value;
+  const constraint = window.data.constraints.rope[index];
+  constraint.pulleys[pulleyindex].wrapping = value;
+  updateUI();
+}
+function addPulley(index) {
+  window.data.constraints.rope[index].pulleys.push({
+    idx: 0,
+    wrapping: "both",
+  });
   updateUI();
 }
 function updateConstraint(element, type, index, property) {
@@ -388,16 +407,22 @@ function resizeCanvas() {
   var width = 600; //window.innerWidth - 600; // 300px for each control column
   //	console.log(canvas.width);
   var height = 600; //window.innerHeight;
-  var devicePixelRatio = 2;
+  var wwidth = window.innerWidth;
 
-  canvas.width = width * devicePixelRatio;
-  canvas.height = height * devicePixelRatio;
+  if (wwidth > 1040) {
+	  wwidth -= 440;
+  }
+
+  wwidth = Math.min(wwidth, window.innerHeight - 90); 
+
+  canvas.width = 600 * 1.9;
+  canvas.height = 600 * 1.9;
 
   // ensure all drawing operations are scaled
 
   // scale everything down using CSS
-  canvas.style.width = width + "px";
-  canvas.style.height = height + "px";
+  canvas.style.width = wwidth + "px";
+  canvas.style.height = wwidth + "px";
   updateUI();
 }
 
@@ -414,9 +439,7 @@ function updateUI() {
     particlesControl.removeChild(particlesControl.lastChild);
   }
   // Re-create particle control boxes
-  window.data.particles.forEach((particle, index) =>
-    createParticleControlBox(index),
-  );
+  window.data.particles.forEach((_, index) => createParticleControlBox(index));
 
   // Update Constraint Controls UI
   const constraintsControl = document.getElementById("constraintsControl");
@@ -425,19 +448,19 @@ function updateUI() {
     constraintsControl.removeChild(constraintsControl.lastChild);
   }
   // Re-create constraint control boxes
-  window.data.constraints.rod.forEach((constraint, index) =>
+  window.data.constraints.rod.forEach((_, index) =>
     createConstraintControlBox("rod", index),
   );
-  window.data.constraints.slider.forEach((constraint, index) =>
+  window.data.constraints.slider.forEach((_, index) =>
     createConstraintControlBox("slider", index),
   );
-  window.data.constraints.colinear.forEach((constraint, index) =>
+  window.data.constraints.colinear.forEach((_, index) =>
     createConstraintControlBox("colinear", index),
   );
-  window.data.constraints.f2k.forEach((constraint, index) =>
+  window.data.constraints.f2k.forEach((_, index) =>
     createConstraintControlBox("f2k", index),
   );
-  window.data.constraints.rope.forEach((constraint, index) =>
+  window.data.constraints.rope.forEach((_, index) =>
     createConstraintControlBox("rope", index),
   );
   const presetsbox = document.getElementById("presets");
@@ -490,7 +513,7 @@ function createParticleControlBox(index) {
                 <label>Mass: <input type="text" min="1" max="500" value="${window.data.particles[index].mass}" oninput="updateParticle(${index}, 'mass', this.value)"></label>
                 <label>X: <input type="text" min="0" max="${canvas.width}" value="${window.data.particles[index].x}" oninput="updateParticle(${index}, 'x', this.value)"></label>
                 <label>Y: <input type="text" min="0" max="${canvas.height}" value="${window.data.particles[index].y}" oninput="updateParticle(${index}, 'y', this.value)"></label>
-                <button onclick="deleteParticle(${index})">X</button>
+                <button class=delete onclick="deleteParticle(${index})">X</button>
               `;
   box.addEventListener("mouseenter", () => {
     window.data.particles[index].hovered = true;
@@ -566,10 +589,11 @@ function createConstraintControlBox(type, index) {
                    )
                    .join("")}
                     </select>
-                  <button onclick="deleteConstraint('rod', ${index})">Delete</button>
+		    One way:
             			<input type="checkbox" oninput="window.data.constraints.rod[${index}].oneway=this.checked;updateUI()" ${
                     window.data.constraints.rod[index].oneway ? "checked" : ""
                   }></input>
+                  <button class=delete onclick="deleteConstraint('rod', ${index})">X</button>
                 `;
   } else if (type === "slider") {
     const slider = window.data.constraints.slider[index];
@@ -593,12 +617,13 @@ function createConstraintControlBox(type, index) {
                   <label>Normal Y: <input type="range" name="normalY" min="-1" max="1" step="0.1" value="${
                     slider.normal.y
                   }" oninput="updateConstraint(this, 'slider', ${index}, 'normalY')"></label>
-                  <button onclick="deleteConstraint('slider', ${index})">Delete</button>
+		  One way:
             			<input type="checkbox" oninput="window.data.constraints.slider[${index}].oneway=this.checked;updateUI()" ${
                     window.data.constraints.slider[index].oneway
                       ? "checked"
                       : ""
                   }></input>
+                  <button class=delete onclick="deleteConstraint('slider', ${index})">X</button>
                 `;
   } else if (type === "colinear") {
     box.innerHTML = `Roller Track1
@@ -645,12 +670,12 @@ function createConstraintControlBox(type, index) {
                    )
                    .join("")}
                     </select>
-                  <button onclick="deleteConstraint('colinear', ${index})">Delete</button>
             			<input type="checkbox" oninput="window.data.constraints.colinear[${index}].oneway=this.checked;updateUI()" ${
                     window.data.constraints.colinear[index].oneway
                       ? "checked"
                       : ""
                   }></input>
+                  <button class=delete onclick="deleteConstraint('colinear', ${index})">X</button>
                 `;
   } else if (type === "f2k") {
     box.innerHTML = `F2k Arm Tip
@@ -697,63 +722,75 @@ function createConstraintControlBox(type, index) {
                    )
                    .join("")}
                     </select>
-                  <button onclick="deleteConstraint('f2k', ${index})">Delete</button>
+		    One way:
             			<input type="checkbox" oninput="window.data.constraints.f2k[${index}].oneway=this.checked;updateUI()" ${
                     window.data.constraints.f2k[index].oneway ? "checked" : ""
                   }></input>
+                  <button class=delete onclick="deleteConstraint('f2k', ${index})">X</button>
                 `;
   } else if (type === "rope") {
     box.innerHTML = `Rope and pulley.
 Fixed end:
+<select name="p1" onchange="updateConstraint(this, 'rope', ${index}, 'p1')">
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints.rope[index].p1 ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+<button onclick="addPulley(${index})">+</button>
+<button onclick="removePulley(${index})">-</button>
+${window.data.constraints.rope[index].pulleys
+  .map(
+    (pulley, j) => `
+Pulley:
+<select name="p2" onchange="updatePulley(this, ${index}, ${j})">
 
-                    <select name="p1" onchange="updateConstraint(this, 'rope', ${index}, 'p1')">
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.rope[index].p1
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    Pulley:
-                    <select name="p2" onchange="updateConstraint(this, 'rope', ${index}, 'p2')">
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${i === pulley.idx ? "selected" : ""}>P ${
+        i + 1
+      }</option>`,
+  )
+  .join("")}
+</select>
+<select onchange="updatePulleyDirection(this, ${index}, ${j})">
+${["both", "cw", "ccw"]
+  .map(
+    (str) =>
+      `<option value=${str} ${
+        str == pulley.wrapping ? "selected" : ""
+      }>${str}</option>`,
+  )
+  .join("")}
+</select>
+`,
+  )
+  .join("")}
+Fixed end:
+<select name="p3" onchange="updateConstraint(this, 'rope', ${index}, 'p3')">
 
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.rope[index].p2
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    Fixed end:
-                    <select name="p3" onchange="updateConstraint(this, 'rope', ${index}, 'p3')">
-
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.rope[index].p3
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-                  <button onclick="deleteConstraint('rope', ${index})">Delete</button>
-            			<input type="checkbox" oninput="window.data.constraints.rope[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints.rope[index].oneway ? "checked" : ""
-                  }></input>
-                `;
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints.rope[index].p3 ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+<button class=delete onclick="deleteConstraint('rope', ${index})">X</button>
+<input type="checkbox" oninput="window.data.constraints.rope[${index}].oneway=this.checked;updateUI()" ${
+      window.data.constraints.rope[index].oneway ? "checked" : ""
+    }></input>
+`;
   }
 
   box.addEventListener("mouseenter", () => {
@@ -797,41 +834,6 @@ canvas.addEventListener("mousedown", function (event) {
     startY = event.clientY - canvas.offsetTop;
   }
 });
-//let zoomLevel = 1;
-//const ZOOM_SENSITIVITY = 0.001;
-//
-//canvas.addEventListener("wheel", function (event) {
-//  event.preventDefault();
-//  zoomLevel += event.deltaY * -ZOOM_SENSITIVITY;
-//  zoomLevel = Math.min(Math.max(0.125, zoomLevel), 4); // Clamp between 0.125x and 4x
-//  ctx.setTransform(zoomLevel, 0, 0, zoomLevel, 0, 0);
-//  drawMechanism(); // You will need to redraw the canvas content
-//});
-//
-//let isPanning = false;
-//let startX = 0,
-//  startY = 0;
-//
-//canvas.addEventListener("mousemove", function (event) {
-//  if (isPanning) {
-//    const x = event.clientX - canvas.offsetLeft;
-//    const y = event.clientY - canvas.offsetTop;
-//    const dx = x - startX;
-//    const dy = y - startY;
-//    ctx.translate(dx, dy);
-//    drawMechanism(); // Redraw the canvas content
-//    startX = x;
-//    startY = y;
-//  }
-//});
-//
-//canvas.addEventListener("mouseup", function (event) {
-//  isPanning = false;
-//});
-//
-//canvas.addEventListener("mouseleave", function (event) {
-//  isPanning = false;
-//});
 canvas.addEventListener("mousemove", function (event) {
   if (draggedParticleIndex !== null) {
     const rect = canvas.getBoundingClientRect();
@@ -847,7 +849,7 @@ canvas.addEventListener("mousemove", function (event) {
   }
 });
 
-canvas.addEventListener("mouseup", function (event) {
+canvas.addEventListener("mouseup", function (_) {
   if (draggedParticleIndex !== null) {
     updateUI(); // Update the entire UI to reflect the new position of the dragged particle
     draggedParticleIndex = null;
@@ -855,7 +857,7 @@ canvas.addEventListener("mouseup", function (event) {
   }
 });
 
-canvas.addEventListener("mouseleave", function (event) {
+canvas.addEventListener("mouseleave", function (_) {
   // If the user drags the mouse outside the canvas, release the dragged particle
   if (draggedParticleIndex !== null) {
     updateUI();
@@ -868,8 +870,7 @@ function saveMechanism() {
 }
 
 function loadMechanism() {
-  const savedData = 0;
-  localStorage.getItem("mechanismData");
+  const savedData = localStorage.getItem("mechanismData");
   if (savedData) {
     window.data = JSON.parse(savedData);
     try {
@@ -886,10 +887,10 @@ window.addEventListener("resize", resizeCanvas);
 window.onload = () => {
   loadMechanism();
   resizeCanvas();
-  //fetch("https://apj.hgreer.com/jstreb", {
-  //  method: "GET", // or 'POST' if needed
-  //  cache: "no-store",
-  //});
+  fetch("https://apj.hgreer.com/jstreb", {
+    method: "GET", // or 'POST' if needed
+    cache: "no-store",
+  });
   //optimize();
   //	setTimeout(optimize, 1000);
 };
@@ -912,7 +913,7 @@ var presets = {
   "Launch Ness Monster":
     '{"projectile":3,"mainaxle":2,"armtip":1,"axleheight":8,"timestep":0.3,"duration":80,"particles":[{"x":600.7,"y":746.2,"mass":10},{"x":559.1,"y":774.0,"mass":4},{"x":660.2,"y":530.0,"mass":100},{"x":703.9,"y":796.7,"mass":1},{"x":810,"y":530,"mass":10},{"x":552,"y":500,"mass":10},{"x":458,"y":666,"mass":10},{"x":886.1,"y":662.4,"mass":10}],"constraints":{"rod":[{"p1":2,"p2":1},{"p1":3,"p2":1,"hovered":true},{"p1":6,"p2":5},{"p1":5,"p2":2},{"p1":4,"p2":2},{"p1":4,"p2":7},{"p1":5,"p2":4}],"slider":[{"p":0,"normal":{"x":1,"y":2.1}},{"p":0,"normal":{"x":-0.6,"y":1.6}},{"p":3,"normal":{"x":0,"y":1},"oneway":true},{"p":6,"normal":{"x":0.6,"y":1}},{"p":6,"normal":{"x":0,"y":1}},{"p":7,"normal":{"x":1,"y":1}},{"p":7,"normal":{"x":0,"y":1}}],"colinear":[{"reference":1,"slider":0,"base":2}]}}',
   "Pulley Sling":
-    '{"projectile":3,"mainaxle":0,"armtip":1,"axleheight":8,"timestep":0.2,"duration":35,"particles":[{"x":546.3,"y":584.3,"mass":1},{"x":285.6,"y":791.6,"mass":4},{"x":560.6,"y":481.2,"mass":10},{"x":1000.9,"y":742.8,"mass":1},{"x":645.5,"y":541.0,"mass":500},{"x":72.7,"y":730.2,"mass":1}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":true},{"p1":0,"p2":2},{"p1":2,"p2":4},{"p1":1,"p2":2},{"p1":0,"p2":4,"oneway":true}],"slider":[{"p":0,"normal":{"x":0,"y":1}},{"p":0,"normal":{"x":0.6,"y":1}},{"p":3,"normal":{"x":0,"y":1},"oneway":true},{"p":5,"normal":{"x":1,"y":1}},{"p":5,"normal":{"x":0,"y":1}}],"colinear":[],"rope":[{"p1":5,"p2":1,"p3":3}]}}',
+    '{"projectile":3,"mainaxle":0,"armtip":1,"axleheight":8,"timestep":0.2,"duration":35,"particles":[{"x":546.3,"y":584.3,"mass":1},{"x":285.6,"y":791.6,"mass":4},{"x":560.6,"y":481.2,"mass":10},{"x":1000.9,"y":742.8,"mass":1},{"x":645.5,"y":541.0,"mass":500},{"x":72.7,"y":730.2,"mass":1}],"constraints":{"rod":[{"p1":0,"p2":1,"hovered":true},{"p1":0,"p2":2},{"p1":2,"p2":4},{"p1":1,"p2":2},{"p1":0,"p2":4,"oneway":true}],"slider":[{"p":0,"normal":{"x":0,"y":1}},{"p":0,"normal":{"x":0.6,"y":1}},{"p":3,"normal":{"x":0,"y":1},"oneway":true},{"p":5,"normal":{"x":1,"y":1}},{"p":5,"normal":{"x":0,"y":1}}],"colinear":[],"rope":[{"p1":5,"pulleys":[{"idx":1,"wrapping":"both"}],"p3":3}]}}',
 };
 let optimizing = false;
 var iterations = 0;
@@ -1036,3 +1037,6 @@ window.loadMechanism = loadMechanism;
 window.optimize = optimize;
 window.save = save;
 window.load = load;
+window.updatePulley = updatePulley;
+window.updatePulleyDirection = updatePulleyDirection;
+window.addPulley = addPulley;

@@ -104,7 +104,7 @@ export function simulate(
     sys_constraints.push(new F2k(f2k.reference, f2k.slider, f2k.base));
   }
   for (var rope of constraints.rope) {
-    sys_constraints.push(new Rope(rope.p1, rope.p2, rope.p3));
+    sys_constraints.push(new Rope(rope.p1, rope.pulleys.slice(), rope.p3));
   }
 
   var system = new System(
@@ -248,42 +248,64 @@ function compute_acceleration_rod(rod, system) {
   return (v[0] * v[0] + v[1] * v[1]) / l;
 }
 function compute_effect_rope(rope, system) {
-  let direction = normalize(
-    subtract(pget(system.positions, rope.p1), pget(system.positions, rope.p2)),
-  );
-  let direction1 = normalize(
-    subtract(pget(system.positions, rope.p2), pget(system.positions, rope.p3)),
-  );
+  var positions = [];
+  positions.push(rope.p1);
+  for (var pulley of rope.p2) {
+    positions.push(pulley.idx);
+  }
+  positions.push(rope.p3);
+  for (var i = 1; i < positions.length - 1; i++) {
+    var p1 = pget(system.positions, positions[i - 1]);
+    var p2 = pget(system.positions, positions[i]);
+    var p3 = pget(system.positions, positions[i + 1]);
+    var wedge_ = wedge(subtract(p1, p2), subtract(p2, p3));
+    if (
+      (wedge_ > 0 && rope.p2[i - 1].wrapping == "ccw") ||
+      (wedge_ < 0 && rope.p2[i - 1].wrapping == "cw")
+    ) {
+      rope.p2.splice(i - 1, 1);
+      break;
+    }
+  }
+  positions = [];
+  positions.push(rope.p1);
+  for (var pulley of rope.p2) {
+    positions.push(pulley.idx);
+  }
+  positions.push(rope.p3);
   let result = new Array(system.positions.length).fill(0);
-  pset(result, [-direction[0], -direction[1]], rope.p1);
-  pset(result, subtract(direction, direction1), rope.p2);
-  pset(result, direction1, rope.p3);
+  for (var i = 0; i < positions.length - 1; i++) {
+    let p1 = positions[i];
+    let p2 = positions[i + 1];
+
+    let direction = normalize(
+      subtract(pget(system.positions, p1), pget(system.positions, p2)),
+    );
+    let old = pget(result, p1);
+    pset(result, subtract(old, direction), p1);
+    pset(result, direction, p2);
+  }
   return result;
 }
-function compute_acceleration_rope(rod, system) {
-  let r = subtract(
-    pget(system.positions, rod.p1),
-    pget(system.positions, rod.p2),
-  );
-  let v = subtract(
-    pget(system.velocities, rod.p1),
-    pget(system.velocities, rod.p2),
-  );
-  let l = Math.sqrt(r[0] * r[0] + r[1] * r[1]);
-  let r1 = subtract(
-    pget(system.positions, rod.p2),
-    pget(system.positions, rod.p3),
-  );
-  let v1 = subtract(
-    pget(system.velocities, rod.p2),
-    pget(system.velocities, rod.p3),
-  );
-  let l1 = Math.sqrt(r1[0] * r1[0] + r1[1] * r1[1]);
+function compute_acceleration_rope(rope, system) {
+  var sum = 0;
+  var positions = [];
+  positions.push(rope.p1);
+  for (var pulley of rope.p2) {
+    positions.push(pulley.idx);
+  }
+  positions.push(rope.p3);
+  for (var i = 0; i < positions.length - 1; i++) {
+    let p1 = positions[i];
+    let p2 = positions[i + 1];
 
-  return (
-    Math.pow(wedge(r, v), 2) / (l * l * l) +
-    Math.pow(wedge(r1, v1), 2) / (l1 * l1 * l1)
-  );
+    let r = subtract(pget(system.positions, p1), pget(system.positions, p2));
+    let v = subtract(pget(system.velocities, p1), pget(system.velocities, p2));
+    let l = Math.sqrt(r[0] * r[0] + r[1] * r[1]);
+    sum += Math.pow(wedge(r, v), 2) / (l * l * l);
+  }
+
+  return sum;
 }
 function compute_acceleration_slider(slider, system) {
   var f = pget(system.forces, slider.p);
@@ -350,19 +372,16 @@ function compute_acceleration_colinear(colinear, system) {
 
   var denom = Math.sqrt(xref * xref + yref * yref);
 
+  var xrefh = xref / denom;
+  var yrefh = yref / denom;
+
   var accel =
-    ((2 * href * x * xref * xref -
-      2 * h * xref * xref * xref -
-      vref * xref * xref * y +
-      3 * vref * x * xref * yref -
-      2 * v * xref * xref * yref +
-      3 * href * xref * y * yref -
-      href * x * yref * yref -
-      2 * h * xref * yref * yref +
-      2 * vref * y * yref * yref -
-      2 * v * yref * yref * yref) *
-      (vref * xref - href * yref)) /
-    (denom * denom * denom * denom * denom);
+    (vref * xrefh - href * yrefh) *
+    (((2 * href * x - vref * y) * xrefh * xrefh +
+      (vref * x + href * y) * 3 * xrefh * yrefh +
+      (2 * vref * y - href * x) * yrefh * yrefh) /
+      (denom * denom ) -
+      2  *(h * xrefh + v * yrefh) / (denom));
 
   return -accel;
 }

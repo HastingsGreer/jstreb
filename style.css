@@ -9,11 +9,19 @@ input[type="text"] {
 input[type="range"] {
   width: 100px;
 }
+@media (min-width: 1640px) {
+	  /* … */
+#allcontrols {
+display: flex;
+flex-direction:row;
+}
+}
 #particlesControl,
 #constraintsControl {
   background: #fff;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   padding: 2px;
+  width: 400px;
 }
 .control-box {
   padding: 2px;
@@ -26,12 +34,17 @@ button {
   background-color: #5c6bc0;
   color: white;
   border: none;
-  padding: 5px 5px;
-  margin: 5px 0;
+  padding: 2px 5px;
+  margin: 2px 0;
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
 }
 button:hover {
   background-color: #3949ab;
+}
+
+.delete {
+	float: right;
+	margin-right: 2px
 }
