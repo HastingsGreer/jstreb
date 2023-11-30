@@ -9,13 +9,9 @@ input[type="text"] {
 input[type="range"] {
   width: 100px;
 }
-@media (min-width: 1640px) {
-	  /* … */
-#allcontrols {
-display: flex;
-flex-direction:row;
-}
-}
+  #allcontrols {
+    display: flex;
+  }
 #particlesControl,
 #constraintsControl {
   background: #fff;
@@ -45,6 +41,6 @@ button:hover {
 }
 
 .delete {
-	float: right;
-	margin-right: 2px
+  float: right;
+  margin-right: 2px;
 }

@@ -317,7 +317,44 @@ function updateParticle(index, property, value) {
 }
 
 function deleteParticle(index) {
+  console.log(window.data.particles);
   window.data.particles.splice(index, 1);
+  console.log(window.data.particles);
+  for (var type in window.data.constraints) {
+    type = window.data.constraints[type];
+    var done = false;
+    while (!done) {
+      done = true;
+      for (var i = 0; i < type.length; i++) {
+        var constraint = type[i];
+        var present = false;
+        console.log(constraint);
+        for (var name of [
+          "p",
+          "p1",
+          "p2",
+          "p3",
+          "reference",
+          "base",
+          "slider",
+        ]) {
+          if (constraint[name] === index) {
+            present = true;
+          }
+        }
+        if (present) {
+          done = false;
+          type.splice(i, 1);
+        }
+      }
+    }
+  }
+
+  for (var name of ["projectile", "armtip", "mainaxle"]) {
+    if (window.data[name] === index) {
+      window.data[name] = 0;
+    }
+  }
   updateUI();
 }
 function createConstraint(type) {
@@ -330,8 +367,8 @@ function createConstraint(type) {
       return;
     }
     var indices = [];
-    for (let i = 0; i < window.data.particles.length; i++) {
-      for (let j = 0; j < window.data.particles.length; j++) {
+    for (let i = window.data.particles.length - 1; i >= 0; i--) {
+      for (let j = window.data.particles.length - 1; j >= 0; j--) {
         if (!constraintExists(i, j)) {
           indices.push([i, j]);
         }
@@ -344,7 +381,18 @@ function createConstraint(type) {
       alert("At least one particle is required to create a slider constraint.");
       return;
     }
-    constraint = { p: 0, normal: { x: 0, y: 1 }, hovered: false }; // Default to the first particle and a vertical normal
+    var sliders = window.data.constraints.slider;
+    var last_particle = window.data.particles.length - 1;
+    if (
+      sliders.length > 0 &&
+      sliders[sliders.length - 1].p == last_particle &&
+      sliders[sliders.length - 1].normal.x == 0 &&
+      sliders[sliders.length - 1].normal.y == 1
+    ) {
+      constraint = { p: last_particle, normal: { x: 1, y: 0 }, hovered: false }; // Default to the first particle and a vertical normal
+    } else {
+      constraint = { p: last_particle, normal: { x: 0, y: 1 }, hovered: false }; // Default to the first particle and a vertical normal
+    }
     window.data.constraints.slider.push(constraint);
   } else if (type === "colinear") {
     constraint = { reference: 0, slider: 1, base: 2 };
@@ -371,6 +419,10 @@ function updatePulleyDirection(element, index, pulleyindex) {
   const value = element.value;
   const constraint = window.data.constraints.rope[index];
   constraint.pulleys[pulleyindex].wrapping = value;
+  updateUI();
+}
+function removePulley(index) {
+  window.data.constraints.rope[index].pulleys.pop();
   updateUI();
 }
 function addPulley(index) {
@@ -404,16 +456,13 @@ function deleteConstraint(type, index) {
 }
 
 function resizeCanvas() {
-  var width = 600; //window.innerWidth - 600; // 300px for each control column
-  //	console.log(canvas.width);
-  var height = 600; //window.innerHeight;
   var wwidth = window.innerWidth;
 
   if (wwidth > 1040) {
-	  wwidth -= 440;
+    wwidth -= 440;
   }
 
-  wwidth = Math.min(wwidth, window.innerHeight - 90); 
+  wwidth = Math.min(wwidth, window.innerHeight - 90);
 
   canvas.width = 600 * 1.9;
   canvas.height = 600 * 1.9;
@@ -423,6 +472,13 @@ function resizeCanvas() {
   // scale everything down using CSS
   canvas.style.width = wwidth + "px";
   canvas.style.height = wwidth + "px";
+
+  if (window.innerWidth - wwidth > 840) {
+    document.getElementById("allcontrols").style.flexDirection = "row";
+  } else {
+    document.getElementById("allcontrols").style.flexDirection = "column";
+  }
+
   updateUI();
 }
 
@@ -510,10 +566,24 @@ function createParticleControlBox(index) {
   const box = document.createElement("div");
   box.className = "control-box";
   box.innerHTML = `
-                <label>Mass: <input type="text" min="1" max="500" value="${window.data.particles[index].mass}" oninput="updateParticle(${index}, 'mass', this.value)"></label>
-                <label>X: <input type="text" min="0" max="${canvas.width}" value="${window.data.particles[index].x}" oninput="updateParticle(${index}, 'x', this.value)"></label>
-                <label>Y: <input type="text" min="0" max="${canvas.height}" value="${window.data.particles[index].y}" oninput="updateParticle(${index}, 'y', this.value)"></label>
-                <button class=delete onclick="deleteParticle(${index})">X</button>
+                <label>Mass: <input type="text" min="1" max="500" value="${
+                  window.data.particles[index].mass
+                }" oninput="updateParticle(${index}, 'mass', this.value)"></label>
+                <label>X: <input type="text" min="0" max="${
+                  canvas.width
+                }" value="${
+                  window.data.particles[index].x
+                }" oninput="updateParticle(${index}, 'x', this.value)"></label>
+                <label>Y: <input type="text" min="0" max="${
+                  canvas.height
+                }" value="${
+                  window.data.particles[index].y
+                }" oninput="updateParticle(${index}, 'y', this.value)"></label>
+                ${
+                  index == data.particles.length - 1
+                    ? `<button class=delete onclick="deleteParticle(${index})">X</button>`
+                    : ``
+                }
               `;
   box.addEventListener("mouseenter", () => {
     window.data.particles[index].hovered = true;
@@ -742,8 +812,6 @@ ${window.data.particles
   )
   .join("")}
 </select>
-<button onclick="addPulley(${index})">+</button>
-<button onclick="removePulley(${index})">-</button>
 ${window.data.constraints.rope[index].pulleys
   .map(
     (pulley, j) => `
@@ -773,6 +841,8 @@ ${["both", "cw", "ccw"]
 `,
   )
   .join("")}
+<button onclick="addPulley(${index})">+</button>
+<button onclick="removePulley(${index})">-</button>
 Fixed end:
 <select name="p3" onchange="updateConstraint(this, 'rope', ${index}, 'p3')">
 
@@ -888,8 +958,9 @@ window.onload = () => {
   loadMechanism();
   resizeCanvas();
   fetch("https://apj.hgreer.com/jstreb", {
-    method: "GET", // or 'POST' if needed
+    method: "GET",
     cache: "no-store",
+    mode: "no-cors",
   });
   //optimize();
   //	setTimeout(optimize, 1000);
@@ -1040,3 +1111,4 @@ window.load = load;
 window.updatePulley = updatePulley;
 window.updatePulleyDirection = updatePulleyDirection;
 window.addPulley = addPulley;
+window.removePulley = removePulley;

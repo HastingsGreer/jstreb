@@ -380,8 +380,8 @@ function compute_acceleration_colinear(colinear, system) {
     (((2 * href * x - vref * y) * xrefh * xrefh +
       (vref * x + href * y) * 3 * xrefh * yrefh +
       (2 * vref * y - href * x) * yrefh * yrefh) /
-      (denom * denom ) -
-      2  *(h * xrefh + v * yrefh) / (denom));
+      (denom * denom) -
+      (2 * (h * xrefh + v * yrefh)) / denom);
 
   return -accel;
 }
