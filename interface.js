@@ -214,7 +214,7 @@ function drawMechanism() {
     typeof window.data.timestep === "number"
   ) {
     var [trajectories, range] = simulate_and_range();
-    document.getElementById("range").innerText = range;
+    document.getElementById("range").innerText = range.toFixed(1);
 
     // Draw the trajectories for the rod constraints
     trajectories.forEach((trajectory) => {
