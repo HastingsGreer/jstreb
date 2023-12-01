@@ -9,9 +9,9 @@ input[type="text"] {
 input[type="range"] {
   width: 100px;
 }
-  #allcontrols {
-    display: flex;
-  }
+#allcontrols {
+  display: flex;
+}
 #particlesControl,
 #constraintsControl {
   background: #fff;
