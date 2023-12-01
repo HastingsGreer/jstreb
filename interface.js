@@ -1,5 +1,51 @@
 import { simulate } from "./simulate.js";
+// Prevent scrolling when touching the canvas
+/*
+document.body.addEventListener("touchstart", function (e) {
+    if (e.target == canvas) {
+        e.preventDefault();
+    }
+}, { passive: false });
+document.body.addEventListener("touchend", function (e) {
+    if (e.target == canvas) {
+        e.preventDefault();
+    }
+}, { passive: false });
+document.body.addEventListener("touchmove", function (e) {
+    if (e.target == canvas) {
+        e.preventDefault();
+    }
+}, { passive: false });
+*/
+
 const canvas = document.getElementById("mechanism");
+canvas.addEventListener("touchstart", function (e) {
+  var touch = e.touches[0];
+  var mouseEvent = new MouseEvent("mousedown", {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+  });
+  canvas.dispatchEvent(mouseEvent);
+});
+canvas.addEventListener("touchend", function (e) {
+  var mouseEvent = new MouseEvent("mouseup", {});
+  canvas.dispatchEvent(mouseEvent);
+});
+canvas.addEventListener("touchmove", function (e) {
+  if (e.touches.length > 1) {
+    return;
+  }
+  if (draggedParticleIndex === null) {
+    return;
+  }
+  e.preventDefault();
+  var touch = e.touches[0];
+  var mouseEvent = new MouseEvent("mousemove", {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+  });
+  canvas.dispatchEvent(mouseEvent);
+});
 const ctx = canvas.getContext("2d");
 window.data = {
   duration: 50,
@@ -320,8 +366,8 @@ function deleteParticle(index) {
   console.log(window.data.particles);
   window.data.particles.splice(index, 1);
   console.log(window.data.particles);
-  for (var type in window.data.constraints) {
-    type = window.data.constraints[type];
+  for (var type1 in window.data.constraints) {
+    var type = window.data.constraints[type1];
     var done = false;
     while (!done) {
       done = true;
@@ -463,6 +509,7 @@ function resizeCanvas() {
   }
 
   wwidth = Math.min(wwidth, window.innerHeight - 90);
+  wwidth = Math.max(wwidth, 400);
 
   canvas.width = 600 * 1.9;
   canvas.height = 600 * 1.9;
@@ -881,11 +928,19 @@ let draggedParticleIndex = null;
 
 // Function to check if a mouse position is over a particle
 function getParticleAtPosition(x, y) {
-  return window.data.particles.findIndex((p) => {
+  var result = window.data.particles.findIndex((p) => {
     const distance = Math.sqrt((p.x - x) ** 2 + (p.y - y) ** 2);
     const radius = Math.cbrt(p.mass) * 10; // Same scaling as used in drawMechanism
     return distance < radius; // The mouse is over the particle if its within its radius
   });
+  if (result == -1) {
+    result = window.data.particles.findIndex((p) => {
+      const distance = Math.sqrt((p.x - x) ** 2 + (p.y - y) ** 2);
+      const radius = 15 + Math.cbrt(p.mass) * 10; // Same scaling as used in drawMechanism
+      return distance < radius; // The mouse is over the particle if its within its radius
+    });
+  }
+  return result;
 }
 
 // Set up the event listeners on the canvas
