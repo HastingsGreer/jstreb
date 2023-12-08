@@ -9,6 +9,8 @@ import {
   dotDivide,
 } from "./matrix.js";
 
+import { dopri } from "./dopri.js";
+
 function normalize(v) {
   var len = Math.sqrt(v[0] * v[0] + v[1] * v[1]);
   return [v[0] / len, v[1] / len];
@@ -31,12 +33,14 @@ function Rod(p1, p2, oneway) {
   this.p1 = p1;
   this.p2 = p2;
   this.oneway = oneway;
+  this.name = "Rod";
 }
 
 function Rope(p1, p2, p3) {
   this.p1 = p1;
   this.p2 = p2;
   this.p3 = p3;
+  this.name = "Rope";
 }
 
 function F2k(reference, slide, base) {
@@ -44,18 +48,21 @@ function F2k(reference, slide, base) {
   this.slide = slide;
   this.base = base;
   this.fatmode = false;
+  this.name = "F2k";
 }
 function Colinear(reference, slide, base, oneway) {
   this.reference = reference;
   this.slide = slide;
   this.base = base;
   this.oneway = oneway;
+  this.name = "Colinear";
 }
 
 function Slider(p, n, oneway) {
   this.p = p;
   this.n = normalize(n);
   this.oneway = oneway;
+  this.name = "Slider";
 }
 
 function System(constraints, masses, positions, velocities) {
@@ -64,6 +71,59 @@ function System(constraints, masses, positions, velocities) {
   this.masses = masses.flatMap((e) => [e, e]);
   this.positions = positions;
   this.velocities = velocities;
+}
+
+export function convert_back(sys_constraints) {
+  let constraints = {
+    rod: [],
+    slider: [],
+    colinear: [],
+    f2k: [],
+    rope: [],
+  };
+
+  for (let constraint of sys_constraints) {
+    switch (constraint.name) {
+      case "Rod":
+        constraints.rod.push({
+          p1: constraint.p1,
+          p2: constraint.p2,
+          oneway: constraint.oneway,
+        });
+        break;
+      case "Slider":
+        constraints.slider.push({
+          p: constraint.p,
+          normal: { x: constraint.n[0], y: constraint.n[1] },
+          oneway: constraint.oneway,
+        });
+        break;
+      case "Colinear":
+        constraints.colinear.push({
+          reference: constraint.reference,
+          slider: constraint.slide,
+          base: constraint.base,
+          oneway: constraint.oneway,
+        });
+        break;
+      case "F2k":
+        constraints.f2k.push({
+          reference: constraint.reference,
+          slider: constraint.slide,
+          base: constraint.base,
+        });
+        break;
+      case "Rope":
+        constraints.rope.push({
+          p1: constraint.p1,
+          pulleys: constraint.p2,
+          p3: constraint.p3,
+        });
+        break;
+    }
+  }
+
+  return constraints;
 }
 
 export function simulate(
@@ -115,7 +175,7 @@ export function simulate(
   );
   system.terminate = terminate;
   let y_0 = system.positions.concat(system.velocities);
-  let trajectory = rk4(system, y_0, timestep, duration);
+  let trajectory = rk45(system, y_0, timestep, duration);
 
   var end = Date.now();
   document.getElementById("simtime").innerText = end - start;
@@ -144,41 +204,65 @@ function rk4(system, y_0, timestep, tfinal) {
 
   return output;
 }
+export function rk45(system, y_0, timestep, tfinal) {
+  var times = [];
+  var constraint_log = [];
+  var fprime = (t, y) => {
+    while (t < times[times.length - 1]) {
+      times.pop();
+      system.constraints = JSON.parse(constraint_log.pop());
+    }
+    times.push(t);
+    constraint_log.push(JSON.stringify(system.constraints));
+
+    return dydt(system, y)[0];
+  };
+
+  var res = dopri(0, tfinal, y_0, fprime, 1e-5, 10000);
+  var output = [];
+  var t = 0;
+
+  while (t < tfinal) {
+    output.push(res.at(t));
+    t += timestep;
+  }
+  return [output, [times, constraint_log]];
+}
 
 function dvdt(system) {
   var interactions = system.constraints.map((constraint) => {
-    if (constraint instanceof Rod) {
+    if (constraint.name === "Rod") {
       return compute_effect_rod(constraint, system);
     }
-    if (constraint instanceof Slider) {
+    if (constraint.name === "Slider") {
       return compute_effect_slider(constraint, system);
     }
-    if (constraint instanceof Colinear) {
+    if (constraint.name === "Colinear") {
       return compute_effect_colinear(constraint, system);
     }
-    if (constraint instanceof F2k) {
+    if (constraint.name === "F2k") {
       return compute_effect_f2k(constraint, system);
     }
-    if (constraint instanceof Rope) {
+    if (constraint.name === "Rope") {
       return compute_effect_rope(constraint, system);
     }
   });
   var interactions2 = dotDivide(interactions, system.masses);
   interactions2 = naiveMultiplyTranspose(interactions2, interactions);
   var desires = system.constraints.map((constraint) => {
-    if (constraint instanceof Rod) {
+    if (constraint.name === "Rod") {
       return compute_acceleration_rod(constraint, system);
     }
-    if (constraint instanceof Slider) {
+    if (constraint.name === "Slider") {
       return compute_acceleration_slider(constraint, system);
     }
-    if (constraint instanceof Colinear) {
+    if (constraint.name === "Colinear") {
       return compute_acceleration_colinear(constraint, system);
     }
-    if (constraint instanceof F2k) {
+    if (constraint.name === "F2k") {
       return compute_acceleration_f2k(constraint, system);
     }
-    if (constraint instanceof Rope) {
+    if (constraint.name === "Rope") {
       return compute_acceleration_rope(constraint, system);
     }
   });

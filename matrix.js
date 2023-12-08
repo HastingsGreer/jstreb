@@ -1,15 +1,33 @@
+function tobitvec(vec) {
+  let res = 0;
+  for (var i = 0; i < vec.length; i++) {
+    if (vec[i] != 0) {
+      res = res + (1 << i);
+    }
+  }
+  return res;
+}
 export function naiveMultiplyTranspose(a, b) {
   const size1 = a.length;
-  const size2 = a[0].length;
   const result = new Array(size1).fill(0).map(() => new Array(size1));
 
+  let a_bitvecs = [];
+  for (var i = 0; i < a.length; i++) {
+    a_bitvecs[i] = tobitvec(a[i]);
+  }
   for (let i = 0; i < size1; i++) {
     var ai = a[i];
     for (let j = 0; j < size1; j++) {
       var acc = 0;
-      var bj = b[j];
-      for (let k = 0; k < size2; k++) {
-        acc += ai[k] * bj[k];
+      var hot = a_bitvecs[i] & a_bitvecs[j];
+      if (hot) {
+        var bj = b[j];
+        while (hot) {
+          var k = 31 - Math.clz32(hot);
+          hot = hot - (1 << k);
+
+          acc += ai[k] * bj[k];
+        }
       }
       result[i][j] = acc;
     }
@@ -105,14 +123,13 @@ export function naiveSolve(A, b) {
     b[i] = tmp;
 
     // Make all rows below this one 0 in current column
+    var Ai = A[i];
     for (let k = i + 1; k < n; k++) {
-      const c = -A[k][i] / A[i][i];
-      for (let j = i; j < n; j++) {
-        if (i === j) {
-          A[k][j] = 0;
-        } else {
-          A[k][j] += c * A[i][j];
-        }
+      var Ak = A[k];
+      const c = -Ak[i] / Ai[i];
+      Ak[i] = 0;
+      for (let j = i + 1; j < n; j++) {
+        Ak[j] += c * Ai[j];
       }
       b[k] += c * b[i];
     }

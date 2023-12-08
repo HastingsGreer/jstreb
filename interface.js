@@ -1,4 +1,4 @@
-import { simulate } from "./simulate.js";
+import { simulate, convert_back } from "./simulate.js";
 // Prevent scrolling when touching the canvas
 /*
 document.body.addEventListener("touchstart", function (e) {
@@ -77,30 +77,26 @@ async function doAnimate() {
     return;
   }
   var reset = JSON.stringify(window.data);
-  var trajectories = simulate(
+  var [trajectories, constraint_log] = simulate(
     window.data.particles,
     window.data.constraints,
     window.data.timestep,
     window.data.duration,
     terminate,
   );
-
+var ts = window.data.timestep;
   window.data.timestep = 0;
-  for (var constraintType of [
-    window.data.constraints.rod,
-    window.data.constraints.slider,
-  ]) {
-    var limit = constraintType.length;
-    for (var i = 0; i < limit; i++) {
-      if (constraintType[i].oneway) {
-        constraintType.splice(i, 1);
-        i -= 1;
-        limit -= 1;
-      }
-    }
-  }
+  
 
+  var t = 0;
+  var constraint_i = 0;
   for (var traj of trajectories) {
+    while (constraint_log[0][constraint_i + 1] < t) {
+      constraint_i += 1;
+    }
+    t += ts;
+    var current_constraints = JSON.parse(constraint_log[1][constraint_i]);
+    window.data.constraints = convert_back(current_constraints);
     for (var i = 0; i < window.data.particles.length; i++) {
       window.data.particles[i].x = traj[2 * i];
       window.data.particles[i].y = traj[2 * i + 1];
@@ -137,7 +133,7 @@ function terminate(state) {
   return vx > 40 && vy > -15;
 }
 function simulate_and_range() {
-  const trajectories = simulate(
+  const [trajectories, constraint_log] = simulate(
     window.data.particles,
     window.data.constraints,
     window.data.timestep,
@@ -190,7 +186,7 @@ function simulate_and_range() {
       ),
   );
   range = (range / Math.max(height1, 0.75 * height2)) * window.data.axleheight;
-  return [trajectories, range];
+  return [trajectories, range, constraint_log];
 }
 
 function drawMechanism() {
@@ -213,11 +209,17 @@ function drawMechanism() {
     window.data.timestep > 0 &&
     typeof window.data.timestep === "number"
   ) {
-    var [trajectories, range] = simulate_and_range();
+    var [trajectories, range, constraint_log] = simulate_and_range();
     document.getElementById("range").innerText = range.toFixed(1);
-
-    // Draw the trajectories for the rod constraints
+    var t = 0;
+    var constraint_i = 0;
     trajectories.forEach((trajectory) => {
+      while (constraint_log[0][constraint_i + 1] < t) {
+        constraint_i += 1;
+      }
+      t += window.data.timestep;
+      var current_constraints = JSON.parse(constraint_log[1][constraint_i]);
+      // Draw the trajectories for the rod constraints
       for (let i = 0; i < window.data.constraints.rod.length; i++) {
         if (!(window.data.constraints.rod[i].oneway == true)) {
           const rod = window.data.constraints.rod[i];
@@ -257,7 +259,6 @@ function drawMechanism() {
     //  ctx.fillText("Inconsistent Constraints (Duplicate Sliders?)", 300, 100);
     //}
   }
-
 
   // Set a thicker line width for rods and sliders
   ctx.lineWidth = 3; // Increase the line width as desired
@@ -339,8 +340,8 @@ function drawMechanism() {
     ctx.strokeStyle = "black";
 
     if (index == window.data.projectile) {
-	    ctx.fillStyle = "lightblue";
-    ctx.strokeStyle = "blue";
+      ctx.fillStyle = "lightblue";
+      ctx.strokeStyle = "blue";
     }
     ctx.fill();
     ctx.stroke();
@@ -367,9 +368,7 @@ function updateParticle(index, property, value) {
 }
 
 function deleteParticle(index) {
-  console.log(window.data.particles);
   window.data.particles.splice(index, 1);
-  console.log(window.data.particles);
   for (var type1 in window.data.constraints) {
     var type = window.data.constraints[type1];
     var done = false;
@@ -378,7 +377,6 @@ function deleteParticle(index) {
       for (var i = 0; i < type.length; i++) {
         var constraint = type[i];
         var present = false;
-        console.log(constraint);
         for (var name of [
           "p",
           "p1",
@@ -1054,7 +1052,6 @@ async function optimize() {
   if (optimizing) {
     optimizing = false;
     document.getElementById("optimize").innerText = "Optimize";
-    console.log(iterations);
     return;
   }
   document.getElementById("optimize").innerText = "Stop";
@@ -1130,7 +1127,6 @@ function load() {
   const input = document.createElement("input");
   input.type = "file";
   input.onchange = (e) => {
-    console.log("asf");
     const file = e.target.files[0];
 
     const reader = new FileReader();
