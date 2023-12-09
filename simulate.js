@@ -116,7 +116,7 @@ export function convert_back(sys_constraints) {
       case "Rope":
         constraints.rope.push({
           p1: constraint.p1,
-          pulleys: constraint.p2,
+          pulleys: constraint.p2.filter(p => (p.wrapping != "cw_drop" && p.wrapping != "ccw_drop")),
           p3: constraint.p3,
         });
         break;
@@ -210,15 +210,20 @@ export function rk45(system, y_0, timestep, tfinal) {
   var fprime = (t, y) => {
     while (t < times[times.length - 1]) {
       times.pop();
-      system.constraints = JSON.parse(constraint_log.pop());
+	    var string = constraint_log.pop();
+      system.constraints = JSON.parse(string);
+      system.string_constraint = string;
     }
     times.push(t);
-    constraint_log.push(JSON.stringify(system.constraints));
+    if (!system.string_constraint) {
+	    system.string_constraint = JSON.stringify(system.constraints);
+    }
+    constraint_log.push(system.string_constraint);
 
     return dydt(system, y)[0];
   };
 
-  var res = dopri(0, tfinal, y_0, fprime, 1e-5, 10000);
+  var res = dopri(0, tfinal, y_0, fprime, 1e-6, 10000);
   var output = [];
   var t = 0;
 
@@ -277,6 +282,7 @@ function dvdt(system) {
   for (var i = 0; i < constraint_forces.length; i++) {
     if (constraint_forces[i] > 0 && system.constraints[i].oneway === true) {
       system.constraints.splice(i, 1);
+      system.string_constraint = null;
       break;
     }
   }
@@ -296,6 +302,7 @@ function dydt(system, y) {
         system.constraints[i].p3 === proj
       ) {
         system.constraints.splice(i, 1);
+	system.string_constraint = null;
         break;
       }
     }
@@ -338,6 +345,31 @@ function compute_effect_rope(rope, system) {
     positions.push(pulley.idx);
   }
   positions.push(rope.p3);
+
+
+  for (var i = 1; i < positions.length - 1; i++) {
+    var p1 = pget(system.positions, positions[i - 1]);
+    var p2 = pget(system.positions, positions[i]);
+    var p3 = pget(system.positions, positions[i + 1]);
+    var wedge_ = wedge(subtract(p1, p2), subtract(p2, p3));
+    if (
+      (wedge_ > 0 && rope.p2[i - 1].wrapping == "ccw_drop") ||
+      (wedge_ < 0 && rope.p2[i - 1].wrapping == "cw_drop")
+    ) {
+      rope.p2[i - 1].wrapping = "both";
+      system.string_constraint = null;
+      break;
+    }
+  }
+
+  positions = [];
+  positions.push(rope.p1);
+  for (var pulley of rope.p2) {
+    if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
+    positions.push(pulley.idx);
+    }
+  }
+  positions.push(rope.p3);
   for (var i = 1; i < positions.length - 1; i++) {
     var p1 = pget(system.positions, positions[i - 1]);
     var p2 = pget(system.positions, positions[i]);
@@ -348,13 +380,16 @@ function compute_effect_rope(rope, system) {
       (wedge_ < 0 && rope.p2[i - 1].wrapping == "cw")
     ) {
       rope.p2.splice(i - 1, 1);
+      system.string_constraint = null;
       break;
     }
   }
   positions = [];
   positions.push(rope.p1);
   for (var pulley of rope.p2) {
+    if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
     positions.push(pulley.idx);
+    }
   }
   positions.push(rope.p3);
   let result = new Array(system.positions.length).fill(0);
@@ -376,7 +411,9 @@ function compute_acceleration_rope(rope, system) {
   var positions = [];
   positions.push(rope.p1);
   for (var pulley of rope.p2) {
+    if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
     positions.push(pulley.idx);
+    }
   }
   positions.push(rope.p3);
   for (var i = 0; i < positions.length - 1; i++) {
@@ -500,6 +537,7 @@ function compute_effect_f2k(f2k, system) {
       f2k.ratio = baselength / tiplength;
     }
     f2k.fatmode = true;
+    system.string_constraint = null;
   }
   if (f2k.fatmode) {
     pset(result, [0, 1], f2k.base);

@@ -881,7 +881,7 @@ ${window.data.particles
   .join("")}
 </select>
 <select onchange="updatePulleyDirection(this, ${index}, ${j})">
-${["both", "cw", "ccw"]
+${["both", "cw", "ccw", "cw_drop", "ccw_drop"]
   .map(
     (str) =>
       `<option value=${str} ${
