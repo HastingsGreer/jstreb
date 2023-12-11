@@ -152,6 +152,14 @@ export function simulate(
       new Slider(slider.p, [slider.normal.x, slider.normal.y], slider.oneway),
     );
   }
+  for (var slider of constraints.pin) {
+    sys_constraints.push(
+      new Slider(slider.p, [0, 1], false),
+    );
+    sys_constraints.push(
+      new Slider(slider.p, [1, 0], false),
+    );
+  }
   for (var colinear of constraints.colinear) {
     sys_constraints.push(
       new Colinear(

@@ -8,55 +8,78 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div id="headerControl">
-      <select id="presets" onchange="loadPreset(this)">
-        <option>Presets</option>
-      </select>
-
-      <button onclick="doAnimate()">Play</button>
-      <button id="optimize" onclick="optimize_range()">Optimize</button>
-      <button id="gentlify" onclick="optimize()">Gentlify</button>
-      <button id="load" onclick="load()">Load</button>
-      <button id="save" onclick="save()">Save</button>
-      <br />
-      Timestep<input
-        id="timestep"
-        type="text"
-        oninput="data.timestep=+this.value;drawMechanism()"
-      />Duration<input
-        type="text"
-        oninput="data.duration=+this.value;drawMechanism()"
-        id="duration"
-      />
-      Main Axle<select
-        id="mainaxle"
-        onchange="data.mainaxle=+this.value;drawMechanism()"
-      ></select>
-      Projectile<select
-        id="projectile"
-        onchange="data.projectile=+this.value;drawMechanism()"
-      ></select>
-      Arm Tip<select
-        id="armtip"
-        onchange="data.armtip=+this.value;drawMechanism()"
-      ></select>
-      Main Axle Height:<input
-        id="axleheight"
-        onchange="data.axleheight=+this.value;drawMechanism()"
-        type="text"
-      />
-      ft
-      <br />
-      <b>
-        Range:
-        <span id="range"></span> ft Peak force: <span id="peakLoad"></span> lbf
-      </b>
-      Simtime:
-      <span id="simtime"></span>
-      <a href="https://www.hgreer.com/TrebuchetSimulator">Back to Blog</a>
-    </div>
     <div id="app">
-      <canvas id="mechanism"></canvas>
+      <div id="canvasHeader">
+        <div id="headerControl">
+          <div class="headerRow">
+            <select id="presets" onchange="loadPreset(this)">
+              <option>Presets</option>
+            </select>
+
+            <button onclick="doAnimate()">Play</button>
+            <button id="optimize" onclick="optimize_range()">Optimize</button>
+            <button id="gentlify" onclick="optimize()">Gentlify</button>
+            <button id="load" onclick="load()">Load</button>
+            <button id="save" onclick="save()">Save</button>
+          </div>
+          <div class="headerRow">
+            <label
+              >Timestep
+              <input
+                id="timestep"
+                type="text"
+                oninput="data.timestep=+this.value;drawMechanism()"
+            /></label>
+            <label>
+              Duration
+              <input
+                type="text"
+                oninput="data.duration=+this.value;drawMechanism()"
+                id="duration"
+            /></label>
+            <label>
+              Main Axle
+              <select
+                id="mainaxle"
+                onchange="data.mainaxle=+this.value;drawMechanism()"
+              ></select
+            ></label>
+            <label>
+              Projectile
+              <select
+                id="projectile"
+                onchange="data.projectile=+this.value;drawMechanism()"
+              ></select
+            ></label>
+            <label>
+              Arm Tip
+              <select
+                id="armtip"
+                onchange="data.armtip=+this.value;drawMechanism()"
+              ></select
+            ></label>
+            <label>
+              Main Axle Height
+              <input
+                id="axleheight"
+                onchange="data.axleheight=+this.value;drawMechanism()"
+                type="text"
+            /></label>
+            ft
+          </div>
+          <div class="headerRow">
+            <b>
+              Range:
+              <span id="range"></span> ft Peak force:
+              <span id="peakLoad"></span> lbf
+            </b>
+            Simtime:
+            <span id="simtime"></span>
+            <a href="https://www.hgreer.com/TrebuchetSimulator">Back to Blog</a>
+          </div>
+        </div>
+        <canvas id="mechanism"></canvas>
+      </div>
       <div id="allcontrols">
         <div id="particlesControl">
           <button onclick="createParticle()">Add Particle</button>
@@ -69,6 +92,7 @@
           <button onclick="createConstraint('colinear')">Add Roller</button>
           <button onclick="createConstraint('f2k')">Add F2k</button>
           <button onclick="createConstraint('rope')">Add Rope</button>
+	  <button onclick="createConstraint('pin')">Add Pin</button>
           <!-- Constraint control boxes will be dynamically inserted here -->
         </div>
       </div>

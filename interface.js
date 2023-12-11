@@ -1,4 +1,6 @@
 import { simulate, convert_back } from "./simulate.js";
+
+var ctypes = ["rod", "pin", "slider", "colinear", "f2k", "rope"]
 // Prevent scrolling when touching the canvas
 /*
 document.body.addEventListener("touchstart", function (e) {
@@ -298,7 +300,7 @@ function drawMechanism() {
   });
 
   // Draw sliders
-  window.data.constraints.slider.forEach((c) => {
+  window.data.constraints.slider.concat(window.data.constraints.pin.flatMap((x) => [{p:x.p, normal:{x:0, y:1} },{p:x.p, normal:{x:1, y:0}}])).forEach((c) => {
     const p = window.data.particles[c.p];
     const sliderLength = 40; // Length of the slider line
     const angle = Math.atan2(c.normal.y, c.normal.x) + Math.PI / 2; // Angle of the slider line
@@ -453,6 +455,9 @@ function createConstraint(type) {
   } else if (type === "colinear") {
     constraint = { reference: 0, slider: 1, base: 2 };
     window.data.constraints.colinear.push(constraint);
+  } else if (type === "pin") {
+	  constraint = {p: window.data.particles.length - 1}
+	  window.data.constraints.pin.push(constraint);
   } else if (type === "f2k") {
     constraint = { reference: 0, slider: 1, base: 2 };
     window.data.constraints.f2k.push(constraint);
@@ -557,25 +562,15 @@ function updateUI() {
   // Update Constraint Controls UI
   const constraintsControl = document.getElementById("constraintsControl");
   // Clear current constraint controls except the 'Add' buttons
-  while (constraintsControl.children.length > 5) {
+  while (constraintsControl.children.length > 6) {
     constraintsControl.removeChild(constraintsControl.lastChild);
   }
   // Re-create constraint control boxes
-  window.data.constraints.rod.forEach((_, index) =>
-    createConstraintControlBox("rod", index),
+  for (var ctype of ctypes) {
+  window.data.constraints[ctype].forEach((_, index) =>
+    createConstraintControlBox(ctype, index),
   );
-  window.data.constraints.slider.forEach((_, index) =>
-    createConstraintControlBox("slider", index),
-  );
-  window.data.constraints.colinear.forEach((_, index) =>
-    createConstraintControlBox("colinear", index),
-  );
-  window.data.constraints.f2k.forEach((_, index) =>
-    createConstraintControlBox("f2k", index),
-  );
-  window.data.constraints.rope.forEach((_, index) =>
-    createConstraintControlBox("rope", index),
-  );
+  }
   const presetsbox = document.getElementById("presets");
   while (presetsbox.children.length > 0) {
     presetsbox.removeChild(presetsbox.lastChild);
@@ -607,14 +602,10 @@ function updateUI() {
 }
 function loadPreset(element) {
   window.data = JSON.parse(presets[element.value]);
-  if (window.data.constraints.colinear === undefined) {
-    window.data.constraints.colinear = [];
+  for (var ctype of ctypes) {
+  if (window.data.constraints[ctype] === undefined) {
+    window.data.constraints[ctype] = [];
   }
-  if (window.data.constraints.f2k === undefined) {
-    window.data.constraints.f2k = [];
-  }
-  if (window.data.constraints.rope === undefined) {
-    window.data.constraints.rope = [];
   }
   updateUI();
 }
@@ -623,15 +614,15 @@ function createParticleControlBox(index) {
   const box = document.createElement("div");
   box.className = "control-box";
   box.innerHTML = `
-                <label>Mass: <input type="text" min="1" max="500" value="${
+                P ${1 + index} <label>Mass <input type="text" min="1" max="500" value="${
                   window.data.particles[index].mass
                 }" oninput="updateParticle(${index}, 'mass', this.value)"></label>
-                <label>X: <input type="text" min="0" max="${
+                <label>X <input type="text" min="0" max="${
                   canvas.width
                 }" value="${
                   window.data.particles[index].x
                 }" oninput="updateParticle(${index}, 'x', this.value)"></label>
-                <label>Y: <input type="text" min="0" max="${
+                <label>Y <input type="text" min="0" max="${
                   canvas.height
                 }" value="${
                   window.data.particles[index].y
@@ -716,7 +707,7 @@ function createConstraintControlBox(type, index) {
                    )
                    .join("")}
                     </select>
-		    One way:
+		    One way
             			<input type="checkbox" oninput="window.data.constraints.rod[${index}].oneway=this.checked;updateUI()" ${
                     window.data.constraints.rod[index].oneway ? "checked" : ""
                   }></input>
@@ -738,13 +729,13 @@ function createConstraintControlBox(type, index) {
                         .join("")}
                     </select>
                   </label>
-                  <label>Normal X: <input type="range" name="normalX" min="-1" max="1" step="0.1" value="${
+                  <label>Normal X <input type="range" name="normalX" min="-1" max="1" step="0.1" value="${
                     slider.normal.x
                   }" oninput="updateConstraint(this, 'slider', ${index}, 'normalX')"></label>
-                  <label>Normal Y: <input type="range" name="normalY" min="-1" max="1" step="0.1" value="${
+                  <label>Normal Y <input type="range" name="normalY" min="-1" max="1" step="0.1" value="${
                     slider.normal.y
                   }" oninput="updateConstraint(this, 'slider', ${index}, 'normalY')"></label>
-		  One way:
+		  One way
             			<input type="checkbox" oninput="window.data.constraints.slider[${index}].oneway=this.checked;updateUI()" ${
                     window.data.constraints.slider[index].oneway
                       ? "checked"
@@ -804,8 +795,13 @@ function createConstraintControlBox(type, index) {
                   }></input>
                   <button class=delete onclick="deleteConstraint('colinear', ${index})">X</button>
                 `;
+  } else if (type === "pin") {
+	  box.innerHTML = `Pin <select onchange="updateConstraint(this, 'pin', ${index}, 'p')">${window.data.particles.map((_, i) => `<option value="${i}" ${i === window.data.constraints.pin[index].p ? "selected" : "" }>P ${i + 1}</option>`,).join("")}</select>
+
+                  <button class=delete onclick="deleteConstraint('pin', ${index})">X</button>
+		  ` 
   } else if (type === "f2k") {
-    box.innerHTML = `F2k Arm Tip
+    box.innerHTML = `F2k <label>Arm Tip
                     <select name="reference" onchange="updateConstraint(this, 'f2k', ${index}, 'reference')">
             	   ${window.data.particles
                    .map((_, i) => i)
@@ -819,6 +815,7 @@ function createConstraintControlBox(type, index) {
                    )
                    .join("")}
                     </select>
+		    </label> <label>
 		    Roller 
                     <select name="slider" onchange="updateConstraint(this, 'f2k', ${index}, 'slider')">
 
@@ -834,6 +831,7 @@ function createConstraintControlBox(type, index) {
                    )
                    .join("")}
                     </select>
+		    </label> <label>
 		    Arm Base
                     <select name="base" onchange="updateConstraint(this, 'f2k', ${index}, 'base')">
 
@@ -849,15 +847,17 @@ function createConstraintControlBox(type, index) {
                    )
                    .join("")}
                     </select>
-		    One way:
+		    </label> <label>
+		    One way
             			<input type="checkbox" oninput="window.data.constraints.f2k[${index}].oneway=this.checked;updateUI()" ${
                     window.data.constraints.f2k[index].oneway ? "checked" : ""
-                  }></input>
+                  }></input></label>
                   <button class=delete onclick="deleteConstraint('f2k', ${index})">X</button>
                 `;
   } else if (type === "rope") {
     box.innerHTML = `
 				Rope and pulley.
+				<label>
 				Fixed end:
 				<select name="p1" onchange="updateConstraint(this, 'rope', ${index}, 'p1')">
 								${window.data.particles
@@ -871,11 +871,11 @@ function createConstraintControlBox(type, index) {
                       }>P ${i + 1}</option>`,
                   )
                   .join("")}
-				</select>
+				</select></label>
 ${window.data.constraints.rope[index].pulleys
   .map(
     (pulley, j) => `
-Pulley:
+<label>Pulley
 <select name="p2" onchange="updatePulley(this, ${index}, ${j})">
 
 ${window.data.particles
@@ -897,13 +897,13 @@ ${["both", "cw", "ccw", "cw_drop", "ccw_drop"]
       }>${str}</option>`,
   )
   .join("")}
-</select>
+</select></label>
 `,
   )
   .join("")}
 <button onclick="addPulley(${index})">+</button>
 <button onclick="removePulley(${index})">-</button>
-Fixed end:
+<label>Fixed end
 <select name="p3" onchange="updateConstraint(this, 'rope', ${index}, 'p3')">
 
 ${window.data.particles
@@ -916,6 +916,7 @@ ${window.data.particles
   )
   .join("")}
 </select>
+</label>
 <button class=delete onclick="deleteConstraint('rope', ${index})">X</button>
 <input type="checkbox" oninput="window.data.constraints.rope[${index}].oneway=this.checked;updateUI()" ${
       window.data.constraints.rope[index].oneway ? "checked" : ""
