@@ -84,9 +84,8 @@ async function doAnimate() {
     window.data.duration,
     terminate,
   );
-var ts = window.data.timestep;
+  var ts = window.data.timestep;
   window.data.timestep = 0;
-  
 
   var t = 0;
   var constraint_i = 0;
@@ -140,6 +139,14 @@ function simulate_and_range() {
     window.data.duration,
     terminate,
   );
+  window.constraint_log = constraint_log;
+  var peakLoad = Math.max(
+    ...constraint_log[1]
+      .map(JSON.parse)
+      .map((y) => Math.max(...y.map((x) => Math.abs(x.force))))
+      .slice(1),
+  );
+
   var axlecoord = -window.data.particles[window.data.mainaxle].y;
   var mincoord = -window.data.particles[window.data.mainaxle].y;
   var range = 0;
@@ -186,7 +193,7 @@ function simulate_and_range() {
       ),
   );
   range = (range / Math.max(height1, 0.75 * height2)) * window.data.axleheight;
-  return [trajectories, range, constraint_log];
+  return [trajectories, range, constraint_log, peakLoad];
 }
 
 function drawMechanism() {
@@ -209,8 +216,9 @@ function drawMechanism() {
     window.data.timestep > 0 &&
     typeof window.data.timestep === "number"
   ) {
-    var [trajectories, range, constraint_log] = simulate_and_range();
+    var [trajectories, range, constraint_log, peakLoad] = simulate_and_range();
     document.getElementById("range").innerText = range.toFixed(1);
+    document.getElementById("peakLoad").innerText = peakLoad.toFixed(1);
     var t = 0;
     var constraint_i = 0;
     trajectories.forEach((trajectory) => {
@@ -1046,28 +1054,34 @@ var presets = {
   "Pulley Sling":
     '{"projectile":3,"mainaxle":0,"armtip":1,"axleheight":8,"timestep":0.2,"duration":35,"particles":[{"x":546.3,"y":584.3,"mass":1},{"x":285.6,"y":791.6,"mass":4},{"x":560.6,"y":481.2,"mass":10},{"x":1000.9,"y":742.8,"mass":1},{"x":645.5,"y":541.0,"mass":500},{"x":72.7,"y":730.2,"mass":1}],"constraints":{"rod":[{"p1":0,"p2":1},{"p1":0,"p2":2},{"p1":2,"p2":4},{"p1":1,"p2":2},{"p1":0,"p2":4,"oneway":true}],"slider":[{"p":0,"normal":{"x":0,"y":1}},{"p":0,"normal":{"x":0.6,"y":1}},{"p":3,"normal":{"x":0,"y":1},"oneway":true},{"p":5,"normal":{"x":1,"y":1}},{"p":5,"normal":{"x":0,"y":1}}],"colinear":[],"rope":[{"p1":5,"pulleys":[{"idx":1,"wrapping":"both"}],"p3":3}]}}',
 };
-let optimizing = false;
+let optimizing_range = false;
 var iterations = 0;
-async function optimize() {
-  if (optimizing) {
-    optimizing = false;
+async function optimize_range() {
+  if (optimizing_range) {
+    optimizing_range = false;
     document.getElementById("optimize").innerText = "Optimize";
     return;
   }
   document.getElementById("optimize").innerText = "Stop";
-  optimizing = true;
+  optimizing_range = true;
   //wait();
   var opt_timeout = 500;
   var timer = opt_timeout;
   var step = 40;
-  while (optimizing) {
+  var oldrange = +document.getElementById("range").innerText;
+  while (optimizing_range) {
     iterations += 1;
-    var oldrange = +document.getElementById("range").innerText;
     var oldDesign = JSON.stringify(window.data);
     for (var p of window.data.particles) {
       if (Math.random() > 0.5) {
-        p.x = p.x + step * (0.5 - Math.random());
-        p.y = p.y + step * (0.5 - Math.random());
+        if (p.x % 100 != 0) {
+          p.x = p.x + step * (0.5 - Math.random());
+        }
+        if (p.y % 100 != 0) {
+          p.y = p.y + step * (0.5 - Math.random());
+        } else {
+          p.mass = Math.abs(p.mass + 0.001 * step * (0.5 - Math.random()));
+        }
       }
     }
     //for (var p of window.data.constraints.slider) {
@@ -1076,7 +1090,8 @@ async function optimize() {
     //    p.normal.y = p.normal.y + (step / 80) * (0.5 - Math.random());
     //  }
     //}
-    var [_, range] = simulate_and_range();
+    var [_, range, _, load] = simulate_and_range();
+
     if (timer % 20 == 0) {
       await wait();
     }
@@ -1090,6 +1105,65 @@ async function optimize() {
       }
     } else {
       timer = opt_timeout;
+      oldrange = range;
+      drawMechanism();
+    }
+  }
+  drawMechanism();
+}
+let optimizing = false;
+async function optimize() {
+  if (optimizing) {
+    optimizing = false;
+    document.getElementById("gentlify").innerText = "Gentlify";
+    return;
+  }
+  document.getElementById("gentlify").innerText = "Stop";
+  optimizing = true;
+  //wait();
+  var opt_timeout = 500;
+  var timer = opt_timeout;
+  var step = 40;
+  var oldrange = +document.getElementById("range").innerText;
+  var oldload = +document.getElementById("peakLoad").innerText;
+  while (optimizing) {
+    iterations += 1;
+    var oldDesign = JSON.stringify(window.data);
+    for (var p of window.data.particles) {
+      if (Math.random() > 0.5) {
+        if (p.x % 100 != 0) {
+          p.x = p.x + step * (0.5 - Math.random());
+        }
+        if (p.y % 100 != 0) {
+          p.y = p.y + step * (0.5 - Math.random());
+        } else {
+          p.mass = Math.abs(p.mass + 0.001 * step * (0.5 - Math.random()));
+        }
+      }
+    }
+    //for (var p of window.data.constraints.slider) {
+    //  if (Math.random() > 0.5) {
+    //    p.normal.x = p.normal.x + (step / 80) * (0.5 - Math.random());
+    //    p.normal.y = p.normal.y + (step / 80) * (0.5 - Math.random());
+    //  }
+    //}
+    var [_, range, _, load] = simulate_and_range();
+
+    if (timer % 20 == 0) {
+      await wait();
+    }
+    var newLoad = load;
+    console.log(newLoad, load, range, oldrange);
+    if (!(newLoad < oldload) || range < oldrange) {
+      window.data = JSON.parse(oldDesign);
+      timer -= 1;
+      if (timer == 0) {
+        timer = opt_timeout;
+        step *= 0.6;
+      }
+    } else {
+      timer = opt_timeout;
+      oldload = load;
       drawMechanism();
     }
   }
@@ -1164,6 +1238,7 @@ window.getParticleAtPosition = getParticleAtPosition;
 window.saveMechanism = saveMechanism;
 window.loadMechanism = loadMechanism;
 window.optimize = optimize;
+window.optimize_range = optimize_range;
 window.save = save;
 window.load = load;
 window.updatePulley = updatePulley;

@@ -38,7 +38,7 @@ function Rod(p1, p2, oneway) {
 
 function Rope(p1, p2, p3) {
   this.p1 = p1;
-  this.p2 = p2;
+  this.p2 = JSON.parse(JSON.stringify(p2));
   this.p3 = p3;
   this.name = "Rope";
 }
@@ -116,7 +116,9 @@ export function convert_back(sys_constraints) {
       case "Rope":
         constraints.rope.push({
           p1: constraint.p1,
-          pulleys: constraint.p2.filter(p => (p.wrapping != "cw_drop" && p.wrapping != "ccw_drop")),
+          pulleys: constraint.p2.filter(
+            (p) => p.wrapping != "cw_drop" && p.wrapping != "ccw_drop",
+          ),
           p3: constraint.p3,
         });
         break;
@@ -210,13 +212,13 @@ export function rk45(system, y_0, timestep, tfinal) {
   var fprime = (t, y) => {
     while (t < times[times.length - 1]) {
       times.pop();
-	    var string = constraint_log.pop();
+      var string = constraint_log.pop();
       system.constraints = JSON.parse(string);
       system.string_constraint = string;
     }
     times.push(t);
-    if (!system.string_constraint) {
-	    system.string_constraint = JSON.stringify(system.constraints);
+    if (1 || !system.string_constraint) {
+      system.string_constraint = JSON.stringify(system.constraints);
     }
     constraint_log.push(system.string_constraint);
 
@@ -272,6 +274,9 @@ function dvdt(system) {
     }
   });
   let constraint_forces = naiveSolve(interactions2, desires);
+  for (var i = 0; i < constraint_forces.length; i++) {
+    system.constraints[i].force = constraint_forces[i];
+  }
   let acc = subtractv(
     dotDivide(
       naiveMultiply([constraint_forces], interactions),
@@ -302,7 +307,7 @@ function dydt(system, y) {
         system.constraints[i].p3 === proj
       ) {
         system.constraints.splice(i, 1);
-	system.string_constraint = null;
+        system.string_constraint = null;
         break;
       }
     }
@@ -346,7 +351,6 @@ function compute_effect_rope(rope, system) {
   }
   positions.push(rope.p3);
 
-
   for (var i = 1; i < positions.length - 1; i++) {
     var p1 = pget(system.positions, positions[i - 1]);
     var p2 = pget(system.positions, positions[i]);
@@ -366,7 +370,7 @@ function compute_effect_rope(rope, system) {
   positions.push(rope.p1);
   for (var pulley of rope.p2) {
     if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
-    positions.push(pulley.idx);
+      positions.push(pulley.idx);
     }
   }
   positions.push(rope.p3);
@@ -388,7 +392,7 @@ function compute_effect_rope(rope, system) {
   positions.push(rope.p1);
   for (var pulley of rope.p2) {
     if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
-    positions.push(pulley.idx);
+      positions.push(pulley.idx);
     }
   }
   positions.push(rope.p3);
@@ -412,7 +416,7 @@ function compute_acceleration_rope(rope, system) {
   positions.push(rope.p1);
   for (var pulley of rope.p2) {
     if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
-    positions.push(pulley.idx);
+      positions.push(pulley.idx);
     }
   }
   positions.push(rope.p3);

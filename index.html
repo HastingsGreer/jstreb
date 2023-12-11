@@ -14,7 +14,8 @@
       </select>
 
       <button onclick="doAnimate()">Play</button>
-      <button id="optimize" onclick="optimize()">Optimize</button>
+      <button id="optimize" onclick="optimize_range()">Optimize</button>
+      <button id="gentlify" onclick="optimize()">Gentlify</button>
       <button id="load" onclick="load()">Load</button>
       <button id="save" onclick="save()">Save</button>
       <br />
@@ -48,7 +49,7 @@
       <br />
       <b>
         Range:
-        <span id="range"></span> ft
+        <span id="range"></span> ft Peak force: <span id="peakLoad"></span> lbf
       </b>
       Simtime:
       <span id="simtime"></span>
