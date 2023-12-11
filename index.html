@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Trebuchet Designer</title>
     
-    <script type="module" crossorigin src="/jstreb/assets/index-7178e283.js"></script>
+    <script type="module" crossorigin src="/jstreb/assets/index-1b19049b.js"></script>
     <link rel="stylesheet" href="/jstreb/assets/index-74610d0f.css">
   </head>
   <body>
@@ -16,7 +16,8 @@
       </select>
 
       <button onclick="doAnimate()">Play</button>
-      <button id="optimize" onclick="optimize()">Optimize</button>
+      <button id="optimize" onclick="optimize_range()">Optimize</button>
+      <button id="gentlify" onclick="optimize()">Gentlify</button>
       <button id="load" onclick="load()">Load</button>
       <button id="save" onclick="save()">Save</button>
       <br />
@@ -50,7 +51,7 @@
       <br />
       <b>
         Range:
-        <span id="range"></span> ft
+        <span id="range"></span> ft Peak force: <span id="peakLoad"></span> lbf
       </b>
       Simtime:
       <span id="simtime"></span>
