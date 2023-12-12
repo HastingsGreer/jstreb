@@ -80,9 +80,10 @@ button {
 #presets {
   width: 150px;
 }
-
-button:hover {
-  background-color: #3949ab;
+@media (min-width: 1000px) {
+  button:hover {
+    background-color: #3949ab;
+  }
 }
 
 .delete {
