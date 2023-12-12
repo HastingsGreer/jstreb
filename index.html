@@ -11,7 +11,7 @@
     <div id="app">
       <div id="canvasHeader">
         <div id="headerControl">
-          <div class="headerRow">
+          <div class="firstRow">
             <select id="presets" onchange="loadPreset(this)">
               <option>Presets</option>
             </select>
@@ -58,6 +58,8 @@
                 onchange="data.armtip=+this.value;drawMechanism()"
               ></select
             ></label>
+          </div>
+          <div class="headerRow">
             <label>
               Main Axle Height
               <input
@@ -66,14 +68,11 @@
                 type="text"
             /></label>
             ft
-          </div>
-          <div class="headerRow">
             <b>
               Range:
-              <span id="range"></span> ft Peak force:
-              <span id="peakLoad"></span> lbf
+              <span id="range"></span> ft
             </b>
-            Simtime:
+            Peak force: <span id="peakLoad"></span> lbf Simtime:
             <span id="simtime"></span>
             <a href="https://www.hgreer.com/TrebuchetSimulator">Back to Blog</a>
           </div>
@@ -82,17 +81,20 @@
       </div>
       <div id="allcontrols">
         <div id="particlesControl">
-          <button onclick="createParticle()">Add Particle</button>
+          <div class="firstRow">
+            <button onclick="createParticle()">+ Particle</button>
+          </div>
           <!-- Particle control boxes will be dynamically inserted here -->
         </div>
-
         <div id="constraintsControl">
-          <button onclick="createConstraint('rod')">Add Rod</button>
-          <button onclick="createConstraint('slider')">Add Slider</button>
-          <button onclick="createConstraint('colinear')">Add Roller</button>
-          <button onclick="createConstraint('f2k')">Add F2k</button>
-          <button onclick="createConstraint('rope')">Add Rope</button>
-	  <button onclick="createConstraint('pin')">Add Pin</button>
+          <div class="firstRow">
+            <button onclick="createConstraint('rod')">+ Rod</button>
+            <button onclick="createConstraint('slider')">+ Slider</button>
+            <button onclick="createConstraint('colinear')">+ Roller</button>
+            <button onclick="createConstraint('f2k')">+ F2k</button>
+            <button onclick="createConstraint('rope')">+ Rope</button>
+            <button onclick="createConstraint('pin')">+ Pin</button>
+          </div>
           <!-- Constraint control boxes will be dynamically inserted here -->
         </div>
       </div>

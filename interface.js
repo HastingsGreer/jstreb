@@ -1,6 +1,6 @@
 import { simulate, convert_back } from "./simulate.js";
 
-var ctypes = ["rod", "pin", "slider", "colinear", "f2k", "rope"]
+var ctypes = ["rod", "pin", "slider", "colinear", "f2k", "rope"];
 // Prevent scrolling when touching the canvas
 /*
 document.body.addEventListener("touchstart", function (e) {
@@ -29,7 +29,7 @@ canvas.addEventListener("touchstart", function (e) {
   });
   canvas.dispatchEvent(mouseEvent);
 });
-canvas.addEventListener("touchend", function (e) {
+canvas.addEventListener("touchend", function (_) {
   var mouseEvent = new MouseEvent("mouseup", {});
   canvas.dispatchEvent(mouseEvent);
 });
@@ -59,6 +59,26 @@ window.data = {
   particles: [{ x: 100, y: 100, mass: 1, hovered: false }],
   constraints: { rod: [], slider: [] },
 };
+var iterations = 0;
+async function doit() {
+  for (var x = 0; x < 600; x += 5) {
+    for (var y = 300; y < 900; y += 5) {
+      window.data.particles[5].x = x;
+      window.data.particles[5].y = y;
+
+      var [_, range, __, ___] = simulate_and_range();
+
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      var r2 = (256 * range) / 40000;
+      ctx.fillStyle = `rgb(${r2}, ${256 * Math.sin(r2 / 10)}, ${r2})`;
+      ctx.fill();
+      if (y % 50 == 0) {
+        await window.waitForAnimationFrame();
+      }
+    }
+  }
+}
 async function wait() {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -228,7 +248,6 @@ function drawMechanism() {
         constraint_i += 1;
       }
       t += window.data.timestep;
-      var current_constraints = JSON.parse(constraint_log[1][constraint_i]);
       // Draw the trajectories for the rod constraints
       for (let i = 0; i < window.data.constraints.rod.length; i++) {
         if (!(window.data.constraints.rod[i].oneway == true)) {
@@ -300,22 +319,29 @@ function drawMechanism() {
   });
 
   // Draw sliders
-  window.data.constraints.slider.concat(window.data.constraints.pin.flatMap((x) => [{p:x.p, normal:{x:0, y:1} },{p:x.p, normal:{x:1, y:0}}])).forEach((c) => {
-    const p = window.data.particles[c.p];
-    const sliderLength = 40; // Length of the slider line
-    const angle = Math.atan2(c.normal.y, c.normal.x) + Math.PI / 2; // Angle of the slider line
-    ctx.beginPath();
-    ctx.moveTo(
-      p.x - sliderLength * Math.cos(angle),
-      p.y - sliderLength * Math.sin(angle),
-    );
-    ctx.lineTo(
-      p.x + sliderLength * Math.cos(angle),
-      p.y + sliderLength * Math.sin(angle),
-    );
-    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
-    ctx.stroke();
-  });
+  window.data.constraints.slider
+    .concat(
+      window.data.constraints.pin.flatMap((x) => [
+        { p: x.p, normal: { x: 0, y: 1 } },
+        { p: x.p, normal: { x: 1, y: 0 } },
+      ]),
+    )
+    .forEach((c) => {
+      const p = window.data.particles[c.p];
+      const sliderLength = 40; // Length of the slider line
+      const angle = Math.atan2(c.normal.y, c.normal.x) + Math.PI / 2; // Angle of the slider line
+      ctx.beginPath();
+      ctx.moveTo(
+        p.x - sliderLength * Math.cos(angle),
+        p.y - sliderLength * Math.sin(angle),
+      );
+      ctx.lineTo(
+        p.x + sliderLength * Math.cos(angle),
+        p.y + sliderLength * Math.sin(angle),
+      );
+      ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
+      ctx.stroke();
+    });
 
   window.data.constraints.colinear
     .concat(window.data.constraints.f2k)
@@ -456,8 +482,8 @@ function createConstraint(type) {
     constraint = { reference: 0, slider: 1, base: 2 };
     window.data.constraints.colinear.push(constraint);
   } else if (type === "pin") {
-	  constraint = {p: window.data.particles.length - 1}
-	  window.data.constraints.pin.push(constraint);
+    constraint = { p: window.data.particles.length - 1 };
+    window.data.constraints.pin.push(constraint);
   } else if (type === "f2k") {
     constraint = { reference: 0, slider: 1, base: 2 };
     window.data.constraints.f2k.push(constraint);
@@ -562,14 +588,14 @@ function updateUI() {
   // Update Constraint Controls UI
   const constraintsControl = document.getElementById("constraintsControl");
   // Clear current constraint controls except the 'Add' buttons
-  while (constraintsControl.children.length > 6) {
+  while (constraintsControl.children.length > 1) {
     constraintsControl.removeChild(constraintsControl.lastChild);
   }
   // Re-create constraint control boxes
   for (var ctype of ctypes) {
-  window.data.constraints[ctype].forEach((_, index) =>
-    createConstraintControlBox(ctype, index),
-  );
+    window.data.constraints[ctype].forEach((_, index) =>
+      createConstraintControlBox(ctype, index),
+    );
   }
   const presetsbox = document.getElementById("presets");
   while (presetsbox.children.length > 0) {
@@ -600,13 +626,30 @@ function updateUI() {
   }
   document.getElementById("axleheight").value = window.data.axleheight;
 }
+function fill_empty_constraints(data) {
+  for (var ctype of ctypes) {
+    if (data.constraints[ctype] === undefined) {
+      data.constraints[ctype] = [];
+    }
+  }
+  var slider_counts = data.particles.map(() => 0);
+  data.constraints.slider.forEach((x) => {
+    if (!x.oneway) {
+      slider_counts[x.p] += 1;
+    }
+  });
+  data.constraints.slider = data.constraints.slider.filter(
+    (x, i) => slider_counts[x.p] < 2,
+  );
+  data.constraints.pin = data.constraints.pin.concat(
+    slider_counts
+      .flatMap((x, i) => [{ count: x, p: i }])
+      .filter((x) => x.count > 1),
+  );
+}
 function loadPreset(element) {
   window.data = JSON.parse(presets[element.value]);
-  for (var ctype of ctypes) {
-  if (window.data.constraints[ctype] === undefined) {
-    window.data.constraints[ctype] = [];
-  }
-  }
+  fill_empty_constraints(window.data);
   updateUI();
 }
 
@@ -614,7 +657,9 @@ function createParticleControlBox(index) {
   const box = document.createElement("div");
   box.className = "control-box";
   box.innerHTML = `
-                P ${1 + index} <label>Mass <input type="text" min="1" max="500" value="${
+                P ${
+                  1 + index
+                } <label>Mass <input type="text" min="1" max="500" value="${
                   window.data.particles[index].mass
                 }" oninput="updateParticle(${index}, 'mass', this.value)"></label>
                 <label>X <input type="text" min="0" max="${
@@ -796,10 +841,17 @@ function createConstraintControlBox(type, index) {
                   <button class=delete onclick="deleteConstraint('colinear', ${index})">X</button>
                 `;
   } else if (type === "pin") {
-	  box.innerHTML = `Pin <select onchange="updateConstraint(this, 'pin', ${index}, 'p')">${window.data.particles.map((_, i) => `<option value="${i}" ${i === window.data.constraints.pin[index].p ? "selected" : "" }>P ${i + 1}</option>`,).join("")}</select>
+    box.innerHTML = `Pin <select onchange="updateConstraint(this, 'pin', ${index}, 'p')">${window.data.particles
+      .map(
+        (_, i) =>
+          `<option value="${i}" ${
+            i === window.data.constraints.pin[index].p ? "selected" : ""
+          }>P ${i + 1}</option>`,
+      )
+      .join("")}</select>
 
                   <button class=delete onclick="deleteConstraint('pin', ${index})">X</button>
-		  ` 
+		  `;
   } else if (type === "f2k") {
     box.innerHTML = `F2k <label>Arm Tip
                     <select name="reference" onchange="updateConstraint(this, 'f2k', ${index}, 'reference')">
@@ -1012,6 +1064,7 @@ function loadMechanism() {
   const savedData = localStorage.getItem("mechanismData");
   if (savedData) {
     window.data = JSON.parse(savedData);
+    fill_empty_constraints(window.data);
     try {
       updateUI();
     } catch {
@@ -1031,6 +1084,7 @@ window.onload = () => {
     cache: "no-store",
     mode: "no-cors",
   });
+  //doit();
   //optimize();
   //	setTimeout(optimize, 1000);
 };
@@ -1056,7 +1110,6 @@ var presets = {
     '{"projectile":3,"mainaxle":0,"armtip":1,"axleheight":8,"timestep":0.2,"duration":35,"particles":[{"x":546.3,"y":584.3,"mass":1},{"x":285.6,"y":791.6,"mass":4},{"x":560.6,"y":481.2,"mass":10},{"x":1000.9,"y":742.8,"mass":1},{"x":645.5,"y":541.0,"mass":500},{"x":72.7,"y":730.2,"mass":1}],"constraints":{"rod":[{"p1":0,"p2":1},{"p1":0,"p2":2},{"p1":2,"p2":4},{"p1":1,"p2":2},{"p1":0,"p2":4,"oneway":true}],"slider":[{"p":0,"normal":{"x":0,"y":1}},{"p":0,"normal":{"x":0.6,"y":1}},{"p":3,"normal":{"x":0,"y":1},"oneway":true},{"p":5,"normal":{"x":1,"y":1}},{"p":5,"normal":{"x":0,"y":1}}],"colinear":[],"rope":[{"p1":5,"pulleys":[{"idx":1,"wrapping":"both"}],"p3":3}]}}',
 };
 let optimizing_range = false;
-var iterations = 0;
 async function optimize_range() {
   if (optimizing_range) {
     optimizing_range = false;
@@ -1081,7 +1134,9 @@ async function optimize_range() {
         if (p.y % 100 != 0) {
           p.y = p.y + step * (0.5 - Math.random());
         } else {
-          p.mass = Math.abs(p.mass + 0.001 * step * (0.5 - Math.random()));
+          if (p.mass % 1 != 0) {
+            p.mass = Math.abs(p.mass + 0.001 * step * (0.5 - Math.random()));
+          }
         }
       }
     }
@@ -1091,7 +1146,7 @@ async function optimize_range() {
     //    p.normal.y = p.normal.y + (step / 80) * (0.5 - Math.random());
     //  }
     //}
-    var [_, range, _, load] = simulate_and_range();
+    var [_, range, _, _oad] = simulate_and_range();
 
     if (timer % 20 == 0) {
       await wait();
@@ -1208,6 +1263,7 @@ function load() {
     reader.onload = (readerEvent) => {
       try {
         window.data = JSON.parse(readerEvent.target.result);
+        fill_empty_constraints(window.data);
         updateUI();
       } catch (error) {
         alert("Error parsing JSON!");
@@ -1246,3 +1302,4 @@ window.updatePulley = updatePulley;
 window.updatePulleyDirection = updatePulleyDirection;
 window.addPulley = addPulley;
 window.removePulley = removePulley;
+window.waitForAnimationFrame = waitForAnimationFrame;

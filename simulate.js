@@ -80,6 +80,7 @@ export function convert_back(sys_constraints) {
     colinear: [],
     f2k: [],
     rope: [],
+    pin: [],
   };
 
   for (let constraint of sys_constraints) {
@@ -153,12 +154,8 @@ export function simulate(
     );
   }
   for (var slider of constraints.pin) {
-    sys_constraints.push(
-      new Slider(slider.p, [0, 1], false),
-    );
-    sys_constraints.push(
-      new Slider(slider.p, [1, 0], false),
-    );
+    sys_constraints.push(new Slider(slider.p, [0, 1], false));
+    sys_constraints.push(new Slider(slider.p, [1, 0], false));
   }
   for (var colinear of constraints.colinear) {
     sys_constraints.push(
@@ -233,7 +230,7 @@ export function rk45(system, y_0, timestep, tfinal) {
     return dydt(system, y)[0];
   };
 
-  var res = dopri(0, tfinal, y_0, fprime, 1e-6, 10000);
+  var res = dopri(0, tfinal, y_0, fprime, 1e-4, 10000);
   var output = [];
   var t = 0;
 
