@@ -548,6 +548,13 @@ function resizeCanvas() {
 
   if (wwidth > 1040) {
     wwidth -= 440;
+    document.getElementById("constraintsControl").style.width="400px";
+    document.getElementById("particlesControl").style.width="400px";
+	 document.getElementById("allcontrols").style.flexGrow = "1";
+  } else{
+	  console.log("hdfsa");
+    document.getElementById("constraintsControl").style.width = "unset";
+    document.getElementById("particlesControl").style.width = "unset";
   }
 
   wwidth = Math.min(wwidth, window.innerHeight - 130);
