@@ -543,7 +543,8 @@ function deleteConstraint(type, index) {
 }
 
 function resizeCanvas() {
-  var wwidth = window.innerWidth;
+  var wwidth = Math.min(window.screen.width, window.innerWidth);
+  console.log(wwidth);
 
   if (wwidth > 1040) {
     wwidth -= 440;
