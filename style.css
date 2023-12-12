@@ -43,6 +43,11 @@ label {
 .headerRow {
   margin-left: 4px;
 }
+@media (max-width: 1040px) {
+  .control-box {
+    margin-left: 4px;
+  }
+}
 button,
 select,
 input {

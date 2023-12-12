@@ -151,7 +151,7 @@ function terminate(state) {
   var vx = state[2 * window.data.projectile + 2 * window.data.particles.length];
   var vy =
     state[2 * window.data.projectile + 2 * window.data.particles.length + 1];
-  return vx > 40 && vy > 0
+  return vx > 40 && vy > 0;
 }
 function simulate_and_range() {
   const [trajectories, constraint_log] = simulate(
@@ -548,11 +548,11 @@ function resizeCanvas() {
 
   if (wwidth > 1040) {
     wwidth -= 440;
-    document.getElementById("constraintsControl").style.width="400px";
-    document.getElementById("particlesControl").style.width="400px";
-	 document.getElementById("allcontrols").style.flexGrow = "1";
-  } else{
-	  console.log("hdfsa");
+    document.getElementById("constraintsControl").style.width = "400px";
+    document.getElementById("particlesControl").style.width = "400px";
+    document.getElementById("allcontrols").style.flexGrow = "1";
+  } else {
+    console.log("hdfsa");
     document.getElementById("constraintsControl").style.width = "unset";
     document.getElementById("particlesControl").style.width = "unset";
   }
@@ -659,47 +659,46 @@ function loadPreset(element) {
   window.data = JSON.parse(presets[element.value]);
   fill_empty_constraints(window.data);
   var [trajectories, range, constraint_log, peakLoad] = simulate_and_range();
-  var minx=999, miny = 999, maxx = 0, maxy = 0;
-    trajectories.forEach((trajectory) => {
-	    for (var i = 0; i < trajectory.length / 2; i+= 2){
-		    var x = trajectory[i];
-		    var y = trajectory[i + 1];
-		    minx = Math.min(x, minx);
-		    if (i / 2 != window.data.projectile) {
-			    maxx = Math.max(maxx, x);
-		    }
-		    if (x < 1200) {
-		    miny = Math.min(y, miny);
-		    }
-		    maxy = Math.max(y, maxy);
-	    }
-    });
+  var minx = 999,
+    miny = 999,
+    maxx = 0,
+    maxy = 0;
+  trajectories.forEach((trajectory) => {
+    for (var i = 0; i < trajectory.length / 2; i += 2) {
+      var x = trajectory[i];
+      var y = trajectory[i + 1];
+      minx = Math.min(x, minx);
+      if (i / 2 != window.data.projectile) {
+        maxx = Math.max(maxx, x);
+      }
+      if (x < 1200) {
+        miny = Math.min(y, miny);
+      }
+      maxy = Math.max(y, maxy);
+    }
+  });
 
-  
-  
   var scale = Math.max(maxx - minx, maxy - miny);
 
-  window.data.duration = Math.round(window.data.duration  * Math.sqrt(1 / scale * .8 * 600 * 1.9));
+  window.data.duration = Math.round(
+    window.data.duration * Math.sqrt((1 / scale) * 0.8 * 600 * 1.9),
+  );
 
   for (var p of window.data.particles) {
+    p.x -= minx;
+    p.x /= scale;
 
-	  p.x -= minx;
-	  p.x /= scale;
+    p.x *= 0.8;
+    p.x += 0.1;
+    p.x *= 600 * 1.9;
 
-	  p.x *= .8;
-	  p.x += .1;
-	  p.x *= (600 * 1.9);
-
-	  p.y -= miny;
-	  p.y /= (scale);
-	  p.y *= .8;
-	  p.y += .1;
-	  p.y *= (600 * 1.9);
+    p.y -= miny;
+    p.y /= scale;
+    p.y *= 0.8;
+    p.y += 0.1;
+    p.y *= 600 * 1.9;
   }
 
-  
-  
-  
   updateUI();
 }
 
