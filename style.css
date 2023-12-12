@@ -27,11 +27,6 @@ label {
 #allcontrols {
   display: flex;
 }
-#particlesControl,
-#constraintsControl {
-  background: #fff;
-  width: 400px;
-}
 .headerRow,
 .control-box {
   padding: 2px;
@@ -46,6 +41,9 @@ label {
 @media (max-width: 1040px) {
   .control-box {
     margin-left: 4px;
+  }
+  #allcontrols {
+	  flex-grow: 1;
   }
 }
 button,
@@ -84,6 +82,14 @@ button {
   button:hover {
     background-color: #3949ab;
   }
+#particlesControl,
+#constraintsControl {
+  width: 400px;
+}
+}
+#particlesControl,
+#constraintsControl {
+  background: #fff;
 }
 
 .delete {
