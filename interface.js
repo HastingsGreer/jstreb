@@ -153,6 +153,7 @@ function terminate(state) {
   return vx > 40 && vy > 0;
 }
 function simulateAndRange() {
+  var start = Date.now();
   const [trajectories, constraintLog] = simulate(
     window.data.particles,
     window.data.constraints,
@@ -214,6 +215,8 @@ function simulateAndRange() {
       ),
   );
   range = (range / Math.max(height1, 0.75 * height2)) * window.data.axleheight;
+  var end = Date.now();
+  document.getElementById("simtime").innerText = end - start;
   return [trajectories, range, constraintLog, peakLoad];
 }
 

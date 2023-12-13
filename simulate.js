@@ -136,7 +136,6 @@ export function simulate(
   duration,
   terminate,
 ) {
-  var start = Date.now();
   let masses = [];
   let positions = [];
   let sysConstraints = [];
@@ -184,8 +183,6 @@ export function simulate(
   let y_0 = system.positions.concat(system.velocities);
   let trajectory = rk45(system, y_0, timestep, duration);
 
-  var end = Date.now();
-  document.getElementById("simtime").innerText = end - start;
   return trajectory;
 }
 
@@ -222,7 +219,7 @@ export function rk45(system, y_0, timestep, tfinal) {
       system.stringConstraint = string;
     }
     times.push(t);
-    if (1 || !system.stringConstraint) {
+    if (1 | !system.stringConstraint) {
       system.stringConstraint = JSON.stringify(system.constraints);
     }
     constraintLog.push(system.stringConstraint);
@@ -230,7 +227,7 @@ export function rk45(system, y_0, timestep, tfinal) {
     return dydt(system, y)[0];
   };
 
-  var res = dopri(0, tfinal, y_0, fprime, 1e-4, 10000);
+  var res = dopri(0, tfinal, y_0, fprime, 1e-6, 10000);
   var output = [];
   var t = 0;
 
@@ -302,7 +299,7 @@ function dvdt(system) {
 function dydt(system, y) {
   system.positions = y.slice(0, system.positions.length);
   system.velocities = y.slice(system.positions.length, y.length);
-  let [dv, terminate] = dvdt(system);
+  let [dv, _] = dvdt(system);
   if (system.terminate(y)) {
     var proj = window.data.projectile;
     for (var i = 0; i < system.constraints.length; i++) {
