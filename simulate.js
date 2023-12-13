@@ -118,7 +118,7 @@ export function convertBack(sysConstraints) {
         constraints.rope.push({
           p1: constraint.p1,
           pulleys: constraint.p2.filter(
-            (p) => p.wrapping != "cwDrop" && p.wrapping != "ccwDrop",
+            (p) => p.wrapping != "cw_drop" && p.wrapping != "ccw_drop",
           ),
           p3: constraint.p3,
         });
@@ -362,8 +362,8 @@ function computeEffectRope(rope, system) {
     var p3 = pget(system.positions, positions[i + 1]);
     var wedge_ = wedge(subtract(p1, p2), subtract(p2, p3));
     if (
-      (wedge_ > 0 && rope.p2[i - 1].wrapping == "ccwDrop") ||
-      (wedge_ < 0 && rope.p2[i - 1].wrapping == "cwDrop")
+      (wedge_ > 0 && rope.p2[i - 1].wrapping == "ccw_drop") ||
+      (wedge_ < 0 && rope.p2[i - 1].wrapping == "cw_drop")
     ) {
       rope.p2[i - 1].wrapping = "both";
       system.stringConstraint = null;
@@ -374,7 +374,7 @@ function computeEffectRope(rope, system) {
   positions = [];
   positions.push(rope.p1);
   for (var pulley of rope.p2) {
-    if (!(pulley.wrapping == "ccwDrop") && !(pulley.wrapping == "cwDrop")) {
+    if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
       positions.push(pulley.idx);
     }
   }
@@ -396,7 +396,7 @@ function computeEffectRope(rope, system) {
   positions = [];
   positions.push(rope.p1);
   for (var pulley of rope.p2) {
-    if (!(pulley.wrapping == "ccwDrop") && !(pulley.wrapping == "cwDrop")) {
+    if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
       positions.push(pulley.idx);
     }
   }
@@ -420,7 +420,7 @@ function computeAccelerationRope(rope, system) {
   var positions = [];
   positions.push(rope.p1);
   for (var pulley of rope.p2) {
-    if (!(pulley.wrapping == "ccwDrop") && !(pulley.wrapping == "cwDrop")) {
+    if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
       positions.push(pulley.idx);
     }
   }
