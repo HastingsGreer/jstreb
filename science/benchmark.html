@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Matrix Multiplication Benchmark</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.2/math.min.js"></script>
+  </head>
+  <body>
+    <button id="benchmarkButton">Run Benchmark</button>
+    <div id="result"></div>
+
+    <script>
+      document
+        .getElementById("benchmarkButton")
+        .addEventListener("click", function () {
+          const size = 60;
+          const iterations = 500;
+          let naiveTotalTime = 0;
+          let mathjsTotalTime = 0;
+
+          const matrixA = createRandomMatrix(size);
+          const matrixB = createRandomMatrix(size);
+
+          const naiveStart = performance.now();
+          for (let i = 0; i < iterations; i++) {
+            const naiveResult = naiveMultiply(matrixA, matrixB);
+          }
+          const naiveEnd = performance.now();
+          naiveTotalTime += naiveEnd - naiveStart;
+
+          const mathjsStart = performance.now();
+          for (let i = 0; i < iterations; i++) {
+            const mathjsResult = math.multiply(matrixA, matrixB);
+          }
+          const mathjsEnd = performance.now();
+          mathjsTotalTime += mathjsEnd - mathjsStart;
+
+          const naiveAverageTime = naiveTotalTime / iterations;
+          const mathjsAverageTime = mathjsTotalTime / iterations;
+
+          document.getElementById("result").innerText =
+            `Naive JS Average Time (500 runs): ${naiveAverageTime.toFixed(
+              4,
+            )} ms\n` +
+            `Math.js Average Time (500 runs): ${mathjsAverageTime.toFixed(
+              4,
+            )} ms`;
+        });
+
+      function createRandomMatrix(size) {
+        return Array.from({ length: size }, () =>
+          Array.from({ length: size }, () => Math.random()),
+        );
+      }
+
+      function naiveMultiply(a, b) {
+        const size = a.length;
+        const result = new Array(size)
+          .fill(0)
+          .map(() => new Array(size).fill(0));
+
+        for (let i = 0; i < size; i++) {
+          for (let j = 0; j < size; j++) {
+            for (let k = 0; k < size; k++) {
+              result[i][j] += a[i][k] * b[k][j];
+            }
+          }
+        }
+
+        return result;
+      }
+    </script>
+  </body>
+</html>

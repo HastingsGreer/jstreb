@@ -1,12 +1,6 @@
 body {
-  margin-top: 0px;
-  margin-left: 0px;
-  margin-right: 0px;
+  margin: 0px;
 }
-
-#canvasHeader {
-}
-
 #app {
   display: flex;
   flex-direction: row;
@@ -17,6 +11,7 @@ body {
 }
 input[type="text"] {
   width: 40px;
+  border-radius: 4px;
 }
 input[type="range"] {
   width: 100px;
@@ -34,6 +29,7 @@ label {
   margin-bottom: 4px;
   background: #e9e9e9;
   min-height: 28px;
+  border-radius: 4px;
 }
 .headerRow {
   margin-left: 4px;
@@ -43,7 +39,7 @@ label {
     margin-left: 4px;
   }
   #allcontrols {
-	  flex-grow: 1;
+    flex-grow: 1;
   }
 }
 button,
@@ -53,7 +49,7 @@ input {
   border: none;
   padding: 2px 5px;
   margin: 2px 0;
-  border-radius: 0px;
+  border-radius: 4px;
   cursor: pointer;
 }
 button {
@@ -82,10 +78,10 @@ button {
   button:hover {
     background-color: #3949ab;
   }
-#particlesControl,
-#constraintsControl {
-  width: 400px;
-}
+  #particlesControl,
+  #constraintsControl {
+    width: 400px;
+  }
 }
 #particlesControl,
 #constraintsControl {

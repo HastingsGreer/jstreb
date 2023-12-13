@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Touch Drawing App</title>
+    <style>
+      canvas {
+        border: 1px solid black;
+        /* Remove touch-action: none; to allow default two-finger gestures */
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="drawingCanvas" width="500" height="500"></canvas>
+    <script>
+      const canvas = document.getElementById("drawingCanvas");
+      const context = canvas.getContext("2d");
+
+      let isDrawing = false;
+      let lastX = 0;
+      let lastY = 0;
+
+      function startDrawing(e) {
+        if (e.touches.length > 1) {
+          // More than one finger touched, not drawing
+          return;
+        }
+
+        isDrawing = true;
+        [lastX, lastY] = [e.touches[0].clientX, e.touches[0].clientY];
+      }
+
+      function stopDrawing() {
+        isDrawing = false;
+      }
+
+      function draw(e) {
+        if (!isDrawing || e.touches.length > 1) {
+          // Not drawing or more than one finger touched
+          return;
+        }
+
+        e.preventDefault(); // Prevent scrolling when drawing
+
+        context.beginPath();
+        context.moveTo(lastX, lastY);
+        context.lineTo(e.touches[0].clientX, e.touches[0].clientY);
+        context.stroke();
+
+        [lastX, lastY] = [e.touches[0].clientX, e.touches[0].clientY];
+      }
+
+      canvas.addEventListener("touchstart", startDrawing);
+      canvas.addEventListener("touchend", stopDrawing);
+      canvas.addEventListener("touchcancel", stopDrawing);
+      canvas.addEventListener("touchmove", draw);
+    </script>
+  </body>
+</html>

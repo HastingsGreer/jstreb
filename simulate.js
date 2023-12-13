@@ -1,5 +1,5 @@
 import {
-  batch_add,
+  batchAdd,
   multiply,
   subtract,
   subtractv,
@@ -73,7 +73,7 @@ function System(constraints, masses, positions, velocities) {
   this.velocities = velocities;
 }
 
-export function convert_back(sys_constraints) {
+export function convertBack(sysConstraints) {
   let constraints = {
     rod: [],
     slider: [],
@@ -83,7 +83,7 @@ export function convert_back(sys_constraints) {
     pin: [],
   };
 
-  for (let constraint of sys_constraints) {
+  for (let constraint of sysConstraints) {
     switch (constraint.name) {
       case "Rod":
         constraints.rod.push({
@@ -118,7 +118,7 @@ export function convert_back(sys_constraints) {
         constraints.rope.push({
           p1: constraint.p1,
           pulleys: constraint.p2.filter(
-            (p) => p.wrapping != "cw_drop" && p.wrapping != "ccw_drop",
+            (p) => p.wrapping != "cwDrop" && p.wrapping != "ccwDrop",
           ),
           p3: constraint.p3,
         });
@@ -139,26 +139,26 @@ export function simulate(
   var start = Date.now();
   let masses = [];
   let positions = [];
-  let sys_constraints = [];
+  let sysConstraints = [];
   for (var particle of particles) {
     masses.push(particle.mass);
     positions.push(particle.x);
     positions.push(particle.y);
   }
   for (var rod of constraints.rod) {
-    sys_constraints.push(new Rod(rod.p1, rod.p2, rod.oneway));
+    sysConstraints.push(new Rod(rod.p1, rod.p2, rod.oneway));
   }
   for (var slider of constraints.slider) {
-    sys_constraints.push(
+    sysConstraints.push(
       new Slider(slider.p, [slider.normal.x, slider.normal.y], slider.oneway),
     );
   }
   for (var slider of constraints.pin) {
-    sys_constraints.push(new Slider(slider.p, [0, 1], false));
-    sys_constraints.push(new Slider(slider.p, [1, 0], false));
+    sysConstraints.push(new Slider(slider.p, [0, 1], false));
+    sysConstraints.push(new Slider(slider.p, [1, 0], false));
   }
   for (var colinear of constraints.colinear) {
-    sys_constraints.push(
+    sysConstraints.push(
       new Colinear(
         colinear.reference,
         colinear.slider,
@@ -168,14 +168,14 @@ export function simulate(
     );
   }
   for (var f2k of constraints.f2k) {
-    sys_constraints.push(new F2k(f2k.reference, f2k.slider, f2k.base));
+    sysConstraints.push(new F2k(f2k.reference, f2k.slider, f2k.base));
   }
   for (var rope of constraints.rope) {
-    sys_constraints.push(new Rope(rope.p1, rope.pulleys.slice(), rope.p3));
+    sysConstraints.push(new Rope(rope.p1, rope.pulleys.slice(), rope.p3));
   }
 
   var system = new System(
-    sys_constraints,
+    sysConstraints,
     masses,
     positions,
     new Array(positions.length).fill(0),
@@ -198,13 +198,13 @@ function rk4(system, y_0, timestep, tfinal) {
   while (t < tfinal && !terminate) {
     t += h;
     var [k1, _] = dydt(system, y);
-    var [k2, _] = dydt(system, batch_add([y, multiply(h / 2, k1)]));
-    var [k3, _] = dydt(system, batch_add([y, multiply(h / 2, k2)]));
-    var [k4, terminate] = dydt(system, batch_add([y, multiply(h, k3)]));
+    var [k2, _] = dydt(system, batchAdd([y, multiply(h / 2, k1)]));
+    var [k3, _] = dydt(system, batchAdd([y, multiply(h / 2, k2)]));
+    var [k4, terminate] = dydt(system, batchAdd([y, multiply(h, k3)]));
 
-    y = batch_add([
+    y = batchAdd([
       y,
-      multiply(h / 6, batch_add([k1, multiply(2, k2), multiply(2, k3), k4])),
+      multiply(h / 6, batchAdd([k1, multiply(2, k2), multiply(2, k3), k4])),
     ]);
     output.push(y);
   }
@@ -213,19 +213,19 @@ function rk4(system, y_0, timestep, tfinal) {
 }
 export function rk45(system, y_0, timestep, tfinal) {
   var times = [];
-  var constraint_log = [];
+  var constraintLog = [];
   var fprime = (t, y) => {
     while (t < times[times.length - 1]) {
       times.pop();
-      var string = constraint_log.pop();
+      var string = constraintLog.pop();
       system.constraints = JSON.parse(string);
-      system.string_constraint = string;
+      system.stringConstraint = string;
     }
     times.push(t);
-    if (1 || !system.string_constraint) {
-      system.string_constraint = JSON.stringify(system.constraints);
+    if (1 || !system.stringConstraint) {
+      system.stringConstraint = JSON.stringify(system.constraints);
     }
-    constraint_log.push(system.string_constraint);
+    constraintLog.push(system.stringConstraint);
 
     return dydt(system, y)[0];
   };
@@ -238,61 +238,61 @@ export function rk45(system, y_0, timestep, tfinal) {
     output.push(res.at(t));
     t += timestep;
   }
-  return [output, [times, constraint_log]];
+  return [output, [times, constraintLog]];
 }
 
 function dvdt(system) {
   var interactions = system.constraints.map((constraint) => {
     if (constraint.name === "Rod") {
-      return compute_effect_rod(constraint, system);
+      return computeEffectRod(constraint, system);
     }
     if (constraint.name === "Slider") {
-      return compute_effect_slider(constraint, system);
+      return computeEffectSlider(constraint, system);
     }
     if (constraint.name === "Colinear") {
-      return compute_effect_colinear(constraint, system);
+      return computeEffectColinear(constraint, system);
     }
     if (constraint.name === "F2k") {
-      return compute_effect_f2k(constraint, system);
+      return computeEffectF2k(constraint, system);
     }
     if (constraint.name === "Rope") {
-      return compute_effect_rope(constraint, system);
+      return computeEffectRope(constraint, system);
     }
   });
   var interactions2 = dotDivide(interactions, system.masses);
   interactions2 = naiveMultiplyTranspose(interactions2, interactions);
   var desires = system.constraints.map((constraint) => {
     if (constraint.name === "Rod") {
-      return compute_acceleration_rod(constraint, system);
+      return computeAccelerationRod(constraint, system);
     }
     if (constraint.name === "Slider") {
-      return compute_acceleration_slider(constraint, system);
+      return computeAccelerationSlider(constraint, system);
     }
     if (constraint.name === "Colinear") {
-      return compute_acceleration_colinear(constraint, system);
+      return computeAccelerationColinear(constraint, system);
     }
     if (constraint.name === "F2k") {
-      return compute_acceleration_f2k(constraint, system);
+      return computeAccelerationF2k(constraint, system);
     }
     if (constraint.name === "Rope") {
-      return compute_acceleration_rope(constraint, system);
+      return computeAccelerationRope(constraint, system);
     }
   });
-  let constraint_forces = naiveSolve(interactions2, desires);
-  for (var i = 0; i < constraint_forces.length; i++) {
-    system.constraints[i].force = constraint_forces[i];
+  let constraintForces = naiveSolve(interactions2, desires);
+  for (var i = 0; i < constraintForces.length; i++) {
+    system.constraints[i].force = constraintForces[i];
   }
   let acc = subtractv(
     dotDivide(
-      naiveMultiply([constraint_forces], interactions),
+      naiveMultiply([constraintForces], interactions),
       system.masses,
     )[0],
     system.forces,
   );
-  for (var i = 0; i < constraint_forces.length; i++) {
-    if (constraint_forces[i] > 0 && system.constraints[i].oneway === true) {
+  for (var i = 0; i < constraintForces.length; i++) {
+    if (constraintForces[i] > 0 && system.constraints[i].oneway === true) {
       system.constraints.splice(i, 1);
-      system.string_constraint = null;
+      system.stringConstraint = null;
       break;
     }
   }
@@ -312,7 +312,7 @@ function dydt(system, y) {
         system.constraints[i].p3 === proj
       ) {
         system.constraints.splice(i, 1);
-        system.string_constraint = null;
+        system.stringConstraint = null;
         break;
       }
     }
@@ -320,7 +320,7 @@ function dydt(system, y) {
   return [system.velocities.concat(dv), false];
 }
 
-function compute_effect_rod(rod, system) {
+function computeEffectRod(rod, system) {
   let direction = normalize(
     subtract(pget(system.positions, rod.p1), pget(system.positions, rod.p2)),
   );
@@ -329,13 +329,13 @@ function compute_effect_rod(rod, system) {
   pset(result, [-direction[0], -direction[1]], rod.p1);
   return result;
 }
-function compute_effect_slider(slider, system) {
+function computeEffectSlider(slider, system) {
   let result = new Array(system.positions.length).fill(0);
   pset(result, slider.n, slider.p);
   return result;
 }
 
-function compute_acceleration_rod(rod, system) {
+function computeAccelerationRod(rod, system) {
   let r = subtract(
     pget(system.positions, rod.p1),
     pget(system.positions, rod.p2),
@@ -348,7 +348,7 @@ function compute_acceleration_rod(rod, system) {
 
   return (v[0] * v[0] + v[1] * v[1]) / l;
 }
-function compute_effect_rope(rope, system) {
+function computeEffectRope(rope, system) {
   var positions = [];
   positions.push(rope.p1);
   for (var pulley of rope.p2) {
@@ -362,11 +362,11 @@ function compute_effect_rope(rope, system) {
     var p3 = pget(system.positions, positions[i + 1]);
     var wedge_ = wedge(subtract(p1, p2), subtract(p2, p3));
     if (
-      (wedge_ > 0 && rope.p2[i - 1].wrapping == "ccw_drop") ||
-      (wedge_ < 0 && rope.p2[i - 1].wrapping == "cw_drop")
+      (wedge_ > 0 && rope.p2[i - 1].wrapping == "ccwDrop") ||
+      (wedge_ < 0 && rope.p2[i - 1].wrapping == "cwDrop")
     ) {
       rope.p2[i - 1].wrapping = "both";
-      system.string_constraint = null;
+      system.stringConstraint = null;
       break;
     }
   }
@@ -374,7 +374,7 @@ function compute_effect_rope(rope, system) {
   positions = [];
   positions.push(rope.p1);
   for (var pulley of rope.p2) {
-    if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
+    if (!(pulley.wrapping == "ccwDrop") && !(pulley.wrapping == "cwDrop")) {
       positions.push(pulley.idx);
     }
   }
@@ -389,14 +389,14 @@ function compute_effect_rope(rope, system) {
       (wedge_ < 0 && rope.p2[i - 1].wrapping == "cw")
     ) {
       rope.p2.splice(i - 1, 1);
-      system.string_constraint = null;
+      system.stringConstraint = null;
       break;
     }
   }
   positions = [];
   positions.push(rope.p1);
   for (var pulley of rope.p2) {
-    if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
+    if (!(pulley.wrapping == "ccwDrop") && !(pulley.wrapping == "cwDrop")) {
       positions.push(pulley.idx);
     }
   }
@@ -415,12 +415,12 @@ function compute_effect_rope(rope, system) {
   }
   return result;
 }
-function compute_acceleration_rope(rope, system) {
+function computeAccelerationRope(rope, system) {
   var sum = 0;
   var positions = [];
   positions.push(rope.p1);
   for (var pulley of rope.p2) {
-    if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
+    if (!(pulley.wrapping == "ccwDrop") && !(pulley.wrapping == "cwDrop")) {
       positions.push(pulley.idx);
     }
   }
@@ -437,12 +437,12 @@ function compute_acceleration_rope(rope, system) {
 
   return sum;
 }
-function compute_acceleration_slider(slider, system) {
+function computeAccelerationSlider(slider, system) {
   var f = pget(system.forces, slider.p);
   return slider.n[0] * f[0] + slider.n[1] * f[1];
 }
 
-function compute_effect_colinear(colinear, system) {
+function computeEffectColinear(colinear, system) {
   var [x, y] = pget(system.positions, colinear.slide);
   var [h, v] = pget(system.velocities, colinear.slide);
 
@@ -465,22 +465,22 @@ function compute_effect_colinear(colinear, system) {
   var denom = Math.sqrt(xref * xref + yref * yref);
   var denom3 = denom * denom * denom;
 
-  var e_x = -yref / denom;
-  var e_y = xref / denom;
+  var eX = -yref / denom;
+  var eY = xref / denom;
 
-  var e_xref = (x * xref * yref + y * yref * yref) / denom3;
-  var e_yref = -(x * xref * xref + xref * y * yref) / denom3;
+  var eXref = (x * xref * yref + y * yref * yref) / denom3;
+  var eYref = -(x * xref * xref + xref * y * yref) / denom3;
 
-  var e_xbase = -e_x - e_xref;
-  var e_ybase = -e_y - e_yref;
+  var eXbase = -eX - eXref;
+  var eYbase = -eY - eYref;
   let result = new Array(system.positions.length).fill(0);
 
-  pset(result, [e_x, e_y], colinear.slide);
-  pset(result, [e_xref, e_yref], colinear.reference);
-  pset(result, [e_xbase, e_ybase], colinear.base);
+  pset(result, [eX, eY], colinear.slide);
+  pset(result, [eXref, eYref], colinear.reference);
+  pset(result, [eXbase, eYbase], colinear.base);
   return result;
 }
-function compute_acceleration_colinear(colinear, system) {
+function computeAccelerationColinear(colinear, system) {
   var [x, y] = pget(system.positions, colinear.slide);
   var [h, v] = pget(system.velocities, colinear.slide);
 
@@ -516,7 +516,7 @@ function compute_acceleration_colinear(colinear, system) {
   return -accel;
 }
 
-function compute_effect_f2k(f2k, system) {
+function computeEffectF2k(f2k, system) {
   var [x, y] = pget(system.positions, f2k.slide);
   var [h, v] = pget(system.velocities, f2k.slide);
 
@@ -546,7 +546,7 @@ function compute_effect_f2k(f2k, system) {
       f2k.ratio = baselength / tiplength;
     }
     f2k.fatmode = true;
-    system.string_constraint = null;
+    system.stringConstraint = null;
   }
   if (f2k.fatmode) {
     pset(result, [0, 1], f2k.base);
@@ -557,21 +557,21 @@ function compute_effect_f2k(f2k, system) {
   var denom = Math.sqrt(xref * xref + yref * yref);
   var denom3 = denom * denom * denom;
 
-  var e_x = -yref / denom;
-  var e_y = xref / denom;
+  var eX = -yref / denom;
+  var eY = xref / denom;
 
-  var e_xref = (x * xref * yref + y * yref * yref) / denom3;
-  var e_yref = -(x * xref * xref + xref * y * yref) / denom3;
+  var eXref = (x * xref * yref + y * yref * yref) / denom3;
+  var eYref = -(x * xref * xref + xref * y * yref) / denom3;
 
-  var e_xbase = -e_x - e_xref;
-  var e_ybase = -e_y - e_yref;
+  var eXbase = -eX - eXref;
+  var eYbase = -eY - eYref;
 
-  pset(result, [e_x, e_y], f2k.slide);
-  pset(result, [e_xref, e_yref], f2k.reference);
-  pset(result, [e_xbase, e_ybase], f2k.base);
+  pset(result, [eX, eY], f2k.slide);
+  pset(result, [eXref, eYref], f2k.reference);
+  pset(result, [eXbase, eYbase], f2k.base);
   return result;
 }
-function compute_acceleration_f2k(f2k, system) {
+function computeAccelerationF2k(f2k, system) {
   if (f2k.fatmode) {
     return -1 - f2k.ratio;
   }

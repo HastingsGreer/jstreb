@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Matrix Multiplication Benchmark</title>
+    <!-- Include external libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.4/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js"></script>
+  </head>
+  <body>
+    <h1>Matrix Multiplication Benchmark</h1>
+    <button onclick="runBenchmarks()">Run Benchmarks</button>
+    <pre id="results"></pre>
+
+    <script>
+      // Function to create a 30x30 matrix
+      function createMatrix(size) {
+        let matrix = [];
+        for (let i = 0; i < size; i++) {
+          matrix[i] = [];
+          for (let j = 0; j < size; j++) {
+            matrix[i][j] = Math.floor(Math.random() * 10);
+          }
+        }
+        return matrix;
+      }
+
+      // Native JavaScript Matrix Multiplication
+      function nativeMultiply(a, b) {
+        let result = new Array(a.length)
+          .fill()
+          .map(() => new Array(b[0].length).fill(0));
+        for (let i = 0; i < a.length; i++) {
+          for (let j = 0; j < b[0].length; j++) {
+            for (let k = 0; k < a[0].length; k++) {
+              result[i][j] += a[i][k] * b[k][j];
+            }
+          }
+        }
+        return result;
+      }
+
+      // Naive Multiply with Transpose
+      function naiveMultiplyTranspose(a, b) {
+        const size1 = a.length;
+        const size2 = a[0].length;
+        const result = new Array(size1).fill(0).map(() => new Array(size1));
+
+        for (let i = 0; i < size1; i++) {
+          var ai = a[i];
+          for (let j = 0; j < size1; j++) {
+            var acc = 0;
+            var bj = b[j];
+            for (let k = 0; k < size2; k++) {
+              acc += ai[k] * bj[k];
+            }
+            result[i][j] = acc;
+          }
+        }
+
+        return result;
+      }
+
+      // Matrix Multiplication using Math.js
+      function mathJsMultiply(a, b) {
+        return math.multiply(a, b);
+      }
+
+      // Matrix Multiplication using Numeric.js
+      function numericJsMultiply(a, b) {
+        return numeric.dot(a, b);
+      }
+
+      // Function to benchmark a multiplication method
+      function benchmark(method, a, b) {
+        let startTime = performance.now();
+        for (var i = 0; i < 1000; i++) {
+          method(a, b);
+        }
+        let endTime = performance.now();
+        return endTime - startTime;
+      }
+
+      // Function to run all benchmarks
+      function runBenchmarks() {
+        let matrixA = createMatrix(30);
+        let matrixB = createMatrix(30);
+
+        let results = "Benchmark Results:\n";
+        results +=
+          "Native JS: " + benchmark(nativeMultiply, matrixA, matrixB) + " ms\n";
+        results +=
+          "Naive Multiply Transpose: " +
+          benchmark(naiveMultiplyTranspose, matrixA, matrixB) +
+          " ms\n";
+        results +=
+          "Math.js: " + benchmark(mathJsMultiply, matrixA, matrixB) + " ms\n";
+        results +=
+          "Numeric.js: " +
+          benchmark(numericJsMultiply, matrixA, matrixB) +
+          " ms\n";
+        // Add benchmarks for other methods here...
+
+        document.getElementById("results").textContent = results;
+      }
+    </script>
+  </body>
+</html>

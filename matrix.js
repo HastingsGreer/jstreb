@@ -11,15 +11,15 @@ export function naiveMultiplyTranspose(a, b) {
   const size1 = a.length;
   const result = new Array(size1).fill(0).map(() => new Array(size1));
 
-  let a_bitvecs = [];
+  let aBitvecs = [];
   for (var i = 0; i < a.length; i++) {
-    a_bitvecs[i] = tobitvec(a[i]);
+    aBitvecs[i] = tobitvec(a[i]);
   }
   for (let i = 0; i < size1; i++) {
     var ai = a[i];
     for (let j = 0; j < size1; j++) {
       var acc = 0;
-      var hot = a_bitvecs[i] & a_bitvecs[j];
+      var hot = aBitvecs[i] & aBitvecs[j];
       if (hot) {
         var bj = b[j];
         while (hot) {
@@ -57,7 +57,7 @@ export function multiply(k, v) {
   }
   return result;
 }
-export function batch_add(vs) {
+export function batchAdd(vs) {
   const result = new Array(vs[0].length);
   for (var i = 0; i < vs[0].length; i++) {
     var acc = 0;
