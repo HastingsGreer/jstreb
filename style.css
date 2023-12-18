@@ -8,6 +8,7 @@ body {
   font-family: system-ui;
   font-size: 16px;
   padding-top: 0px;
+  background: #fffff8;
 }
 input[type="text"] {
   width: 40px;
@@ -51,6 +52,7 @@ input {
   margin: 2px 0;
   border-radius: 4px;
   cursor: pointer;
+  background: #fffff8;
 }
 button {
   background-color: #5c5bc0;
@@ -82,10 +84,6 @@ button {
   #constraintsControl {
     width: 400px;
   }
-}
-#particlesControl,
-#constraintsControl {
-  background: #fff;
 }
 
 .delete {
