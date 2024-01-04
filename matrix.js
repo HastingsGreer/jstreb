@@ -7,7 +7,7 @@ function tobitvec(vec) {
   }
   return res;
 }
-export function naiveMultiplyTranspose(a, b) {
+export function multiplyTransposeSameSparsity(a, b) {
   const size1 = a.length;
   const result = new Array(size1).fill(0).map(() => new Array(size1));
 
