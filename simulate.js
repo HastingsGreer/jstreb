@@ -4,7 +4,7 @@ import {
   subtract,
   subtractv,
   naiveMultiply,
-  naiveMultiplyTranspose,
+  multiplyTransposeSameSparsity,
   naiveSolve,
   dotDivide,
 } from "./matrix.js";
@@ -257,7 +257,7 @@ function dvdt(system) {
     }
   });
   var interactions2 = dotDivide(interactions, system.masses);
-  interactions2 = naiveMultiplyTranspose(interactions2, interactions);
+  interactions2 = multiplyTransposeSameSparsity(interactions2, interactions);
   var desires = system.constraints.map((constraint) => {
     if (constraint.name === "Rod") {
       return computeAccelerationRod(constraint, system);
