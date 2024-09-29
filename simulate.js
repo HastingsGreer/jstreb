@@ -7,6 +7,7 @@ import {
   multiplyTransposeSameSparsity,
   naiveSolve,
   dotDivide,
+  store,
 } from "./matrix.js";
 
 import { dopri } from "./dopri.js";
@@ -212,6 +213,7 @@ export function rk45(system, y_0, timestep, tfinal) {
   var times = [];
   var constraintLog = [];
   var fprime = (t, y) => {
+    store.clear();
     while (t < times[times.length - 1]) {
       times.pop();
       var string = constraintLog.pop();

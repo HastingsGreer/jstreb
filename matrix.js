@@ -1,3 +1,57 @@
+function ArrayStore() {
+  this.one_d_arrays = [];
+  this.two_d_arrays = [];
+  this.zero_time = 0;
+}
+
+ArrayStore.prototype.getVec = function (rows) {
+  if (this.one_d_arrays[rows] === undefined) {
+    this.one_d_arrays[rows] = {
+      index: 0,
+      zero_time: this.zero_time,
+      backing: new Array(100).fill(0).map(() => Array(rows)),
+    };
+  }
+  var store = this.one_d_arrays[rows];
+  if (store.zero_time != this.zero_time) {
+    store.index = 0;
+    store.zero_time = this.zero_time;
+  }
+  store.index += 1;
+  return store.backing[store.index - 1];
+};
+
+ArrayStore.prototype.getMat = function (rows, cols) {
+  if (this.two_d_arrays[rows] === undefined) {
+    this.two_d_arrays[rows] = [];
+  }
+  if (this.two_d_arrays[rows][cols] === undefined) {
+    this.two_d_arrays[rows][cols] = {
+      index: 0,
+      zero_time: this.zero_time,
+      backing: new Array(100).fill(0).map(() =>
+        Array(rows)
+          .fill(0)
+          .map(() => new Array(cols)),
+      ),
+    };
+  }
+  var store = this.two_d_arrays[rows][cols];
+
+  if (store.zero_time != this.zero_time) {
+    store.index = 0;
+    store.zero_time = this.zero_time;
+  }
+  store.index += 1;
+  var ret = store.backing[store.index - 1];
+  return ret;
+};
+ArrayStore.prototype.clear = function () {
+  this.zero_time += 1;
+};
+
+export const store = new ArrayStore();
+
 function tobitvec(vec) {
   let res = 0;
   for (var i = 0; i < vec.length; i++) {
@@ -9,9 +63,9 @@ function tobitvec(vec) {
 }
 export function multiplyTransposeSameSparsity(a, b) {
   const size1 = a.length;
-  const result = new Array(size1).fill(0).map(() => new Array(size1));
+  const result = store.getMat(size1, size1);
 
-  let aBitvecs = [];
+  let aBitvecs = store.getVec(size1);
   for (var i = 0; i < a.length; i++) {
     aBitvecs[i] = tobitvec(a[i]);
   }
@@ -38,7 +92,7 @@ export function multiplyTransposeSameSparsity(a, b) {
 export function dotDivide(a, b) {
   const size1 = a.length;
   const size2 = a[0].length;
-  const result = new Array(size1).fill(0).map(() => new Array(size2));
+  const result = store.getMat(size1, size2);
 
   for (let i = 0; i < size1; i++) {
     let ri = result[i];
@@ -51,14 +105,14 @@ export function dotDivide(a, b) {
   return result;
 }
 export function multiply(k, v) {
-  const result = new Array(v.length);
+  const result = store.getVec(v.length);
   for (var i = 0; i < v.length; i++) {
     result[i] = v[i] * k;
   }
   return result;
 }
 export function batchAdd(vs) {
-  const result = new Array(vs[0].length);
+  const result = store.getVec(vs[0].length);
   for (var i = 0; i < vs[0].length; i++) {
     var acc = 0;
     for (var j = 0; j < vs.length; j++) {
