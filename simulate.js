@@ -354,17 +354,43 @@ function computeEffectRope(rope, system) {
   positions.push(rope.p3);
 
   for (var i = 1; i < positions.length - 1; i++) {
-    var p1 = pget(system.positions, positions[i - 1]);
-    var p2 = pget(system.positions, positions[i]);
-    var p3 = pget(system.positions, positions[i + 1]);
-    var wedge_ = wedge(subtract(p1, p2), subtract(p2, p3));
     if (
-      (wedge_ > 0 && rope.p2[i - 1].wrapping == "ccw_drop") ||
-      (wedge_ < 0 && rope.p2[i - 1].wrapping == "cw_drop")
+      rope.p2[i - 1].wrapping == "ccw_drop" ||
+      rope.p2[i - 1].wrapping == "cw_drop"
     ) {
-      rope.p2[i - 1].wrapping = "both";
-      system.stringConstraint = null;
-      break;
+      // turn on pulleys as they drop onto the rope
+
+      // check for dropping on based on the shape of the rope through the activated pulleys
+      var pulley_before = i - 1;
+      while (
+        pulley_before > 1 &&
+        (rope.p2[pulley_before - 1].wrapping == "ccw_drop" ||
+          rope.p2[pulley_before - 1].wrapping == "cw_drop")
+      ) {
+        pulley_before -= 1;
+      }
+      var pulley_after = i + 1;
+      while (
+        pulley_after < positions.length - 2 &&
+        (rope.p2[pulley_after - 1].wrapping == "ccw_drop" ||
+          rope.p2[pulley_after - 1].wrapping == "cw_drop")
+      ) {
+        pulley_after += 1;
+      }
+      //
+      var p1 = pget(system.positions, positions[pulley_before]);
+      var p2 = pget(system.positions, positions[i]);
+      var p3 = pget(system.positions, positions[pulley_after]);
+      var wedge_ = wedge(subtract(p1, p2), subtract(p2, p3));
+
+      if (
+        (wedge_ > 0 && rope.p2[i - 1].wrapping == "ccw_drop") ||
+        (wedge_ < 0 && rope.p2[i - 1].wrapping == "cw_drop")
+      ) {
+        rope.p2[i - 1].wrapping = "both";
+        system.stringConstraint = null;
+        break;
+      }
     }
   }
 
