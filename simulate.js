@@ -97,6 +97,9 @@ export function convertBack(sysConstraints) {
   };
 
   for (let constraint of sysConstraints) {
+    if( constraint.oneway == RELEASED) {
+	    continue;
+    }
     switch (constraint.name) {
       case "Rod":
         constraints.rod.push({

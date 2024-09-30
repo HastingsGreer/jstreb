@@ -115,8 +115,8 @@ async function doAnimate() {
       constraintI += 1;
     }
     t += ts;
-    //var currentConstraints = JSON.parse(constraintLog[1][constraintI]);
-    //window.data.constraints = convertBack(currentConstraints);
+    var currentConstraints = JSON.parse(constraintLog[1][constraintI]);
+    window.data.constraints = convertBack(currentConstraints);
     for (var i = 0; i < window.data.particles.length; i++) {
       window.data.particles[i].x = traj[2 * i];
       window.data.particles[i].y = traj[2 * i + 1];
