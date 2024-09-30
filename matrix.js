@@ -67,7 +67,7 @@ export function multiplyTransposeSameSparsity(a, b) {
 
   let aBitvecs = store.getVec(size1);
   for (var i = 0; i < a.length; i++) {
-    aBitvecs[i] = tobitvec(a[i]);
+    aBitvecs[i] = a[i][0];
   }
   for (let i = 0; i < size1; i++) {
     var ai = a[i];
@@ -80,11 +80,31 @@ export function multiplyTransposeSameSparsity(a, b) {
           var k = 31 - Math.clz32(hot);
           hot = hot - (1 << k);
 
-          acc += ai[k] * bj[k];
+          acc += ai[k + 1] * bj[k + 1];
         }
       }
       result[i][j] = acc;
     }
+  }
+
+  return result;
+}
+export function sparseDotDivide(a, b) {
+  const size1 = a.length;
+  const size2 = a[0].length;
+  const result = store.getMat(size1, size2);
+
+  for (let i = 0; i < size1; i++) {
+    let ri = result[i];
+    let ai = a[i];
+	  ri[0] = ai[0]
+	  var hot = ri[0]
+        while (hot) {
+          var k = 31 - Math.clz32(hot);
+          hot = hot - (1 << k);
+
+          ri[k + 1]  = ai[k + 1] / b[k];
+        }
   }
 
   return result;
@@ -130,6 +150,34 @@ export function subtractv(a, b) {
     return a[i] - b[i];
   });
 }
+
+export function multiplyBSparse(a, b) {
+  const size1 = a.length;
+  const size2 = a[0].length;
+  const size3 = b.length;
+  const size4 = b[0].length - 1;
+  if (size2 != size3) {
+    console.log(size2);
+    console.log(size3);
+
+    assert(size2 == size3);
+  }
+  const result = new Array(size1).fill(0).map(() => new Array(size4).fill(0));
+
+  for (let i = 0; i < size1; i++) {
+    for (let k = 0; k < size2; k++) {
+      var hot = b[k][0];
+      while (hot) {
+	var j = 31 - Math.clz32(hot);
+	hot = hot - (1 << j)
+        result[i][j] += a[i][k] * b[k][j + 1];
+      }
+    }
+  }
+
+  return result;
+}
+
 
 export function naiveMultiply(a, b) {
   const size1 = a.length;

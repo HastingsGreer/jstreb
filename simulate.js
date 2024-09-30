@@ -1,4 +1,5 @@
 import {
+  multiplyBSparse,
   batchAdd,
   multiply,
   subtract,
@@ -7,10 +8,13 @@ import {
   multiplyTransposeSameSparsity,
   naiveSolve,
   dotDivide,
+	sparseDotDivide,
   store,
 } from "./matrix.js";
 
 import { dopri } from "./dopri.js";
+
+const RELEASED = 2;
 
 function normalize(v) {
   var len = Math.sqrt(v[0] * v[0] + v[1] * v[1]);
@@ -29,6 +33,14 @@ function pset(array, v, n) {
   array[2 * n] = v[0];
   array[2 * n + 1] = v[1];
 }
+
+function sparsepset(array, v, n) {
+  array[0] |= 3 << (2 * n);
+  array[2 * n + 1] = v[0];
+  array[2 * n + 2] = v[1];
+}
+
+
 
 function Rod(p1, p2, oneway) {
   this.p1 = p1;
@@ -241,56 +253,70 @@ export function rk45(system, y_0, timestep, tfinal) {
 }
 
 function dvdt(system) {
-  var interactions = system.constraints.map((constraint) => {
+  var interactions = store.getMat(system.constraints.length, system.masses.length + 1)
+  for (var constr = 0; constr < system.constraints.length; constr++){
+    var constraint = system.constraints[constr];
+    var row = interactions[constr];
+    row[0] = 0;
+    if (constraint.oneway === RELEASED) {
+        continue
+    }
     if (constraint.name === "Rod") {
-      return computeEffectRod(constraint, system);
+       computeEffectRod(row, constraint, system);
     }
     if (constraint.name === "Slider") {
-      return computeEffectSlider(constraint, system);
+       computeEffectSlider(row,constraint, system);
     }
     if (constraint.name === "Colinear") {
-      return computeEffectColinear(constraint, system);
+       computeEffectColinear(row, constraint, system);
     }
     if (constraint.name === "F2k") {
-      return computeEffectF2k(constraint, system);
+       computeEffectF2k(row, constraint, system);
     }
     if (constraint.name === "Rope") {
-      return computeEffectRope(constraint, system);
+       computeEffectRope(row, constraint, system);
     }
-  });
-  var interactions2 = dotDivide(interactions, system.masses);
+  }
+  var interactions2 = sparseDotDivide(interactions, system.masses);
   interactions2 = multiplyTransposeSameSparsity(interactions2, interactions);
-  var desires = system.constraints.map((constraint) => {
+  for (var i = 0; i < interactions2.length; i++) {
+	  if (interactions2[i][i] == 0) {
+		  interactions2[i][i] = 1
+	  }
+  }
+  var desires = store.getVec(system.constraints.length)
+  for (var constr = 0; constr < system.constraints.length; constr++){
+    var constraint = system.constraints[constr];
     if (constraint.name === "Rod") {
-      return computeAccelerationRod(constraint, system);
+      desires[constr] = computeAccelerationRod(constraint, system);
     }
     if (constraint.name === "Slider") {
-      return computeAccelerationSlider(constraint, system);
+      desires[constr] = computeAccelerationSlider(constraint, system);
     }
     if (constraint.name === "Colinear") {
-      return computeAccelerationColinear(constraint, system);
+      desires[constr] = computeAccelerationColinear(constraint, system);
     }
     if (constraint.name === "F2k") {
-      return computeAccelerationF2k(constraint, system);
+      desires[constr] = computeAccelerationF2k(constraint, system);
     }
     if (constraint.name === "Rope") {
-      return computeAccelerationRope(constraint, system);
+      desires[constr] = computeAccelerationRope(constraint, system);
     }
-  });
+  }
   let constraintForces = naiveSolve(interactions2, desires);
   for (var i = 0; i < constraintForces.length; i++) {
     system.constraints[i].force = constraintForces[i];
   }
   let acc = subtractv(
     dotDivide(
-      naiveMultiply([constraintForces], interactions),
+      multiplyBSparse([constraintForces], interactions),
       system.masses,
     )[0],
     system.forces,
   );
   for (var i = 0; i < constraintForces.length; i++) {
     if (constraintForces[i] > 0 && system.constraints[i].oneway === true) {
-      system.constraints.splice(i, 1);
+      system.constraints[i].oneway = RELEASED;
       system.stringConstraint = null;
       break;
     }
@@ -319,18 +345,16 @@ function dydt(system, y) {
   return [system.velocities.concat(dv), false];
 }
 
-function computeEffectRod(rod, system) {
+function computeEffectRod(result, rod, system) {
   let direction = normalize(
     subtract(pget(system.positions, rod.p1), pget(system.positions, rod.p2)),
   );
-  let result = new Array(system.positions.length).fill(0);
-  pset(result, direction, rod.p2);
-  pset(result, [-direction[0], -direction[1]], rod.p1);
+  sparsepset(result, direction, rod.p2);
+  sparsepset(result, [-direction[0], -direction[1]], rod.p1);
   return result;
 }
-function computeEffectSlider(slider, system) {
-  let result = new Array(system.positions.length).fill(0);
-  pset(result, slider.n, slider.p);
+function computeEffectSlider(result, slider, system) {
+  sparsepset(result, slider.n, slider.p);
   return result;
 }
 
@@ -347,7 +371,7 @@ function computeAccelerationRod(rod, system) {
 
   return (v[0] * v[0] + v[1] * v[1]) / l;
 }
-function computeEffectRope(rope, system) {
+function computeEffectRope(result, rope, system) {
   var positions = [];
   positions.push(rope.p1);
   for (var pulley of rope.p2) {
@@ -426,7 +450,7 @@ function computeEffectRope(rope, system) {
     }
   }
   positions.push(rope.p3);
-  let result = new Array(system.positions.length).fill(0);
+  result.fill(0)
   for (var i = 0; i < positions.length - 1; i++) {
     let p1 = positions[i];
     let p2 = positions[i + 1];
@@ -434,9 +458,9 @@ function computeEffectRope(rope, system) {
     let direction = normalize(
       subtract(pget(system.positions, p1), pget(system.positions, p2)),
     );
-    let old = pget(result, p1);
-    pset(result, subtract(old, direction), p1);
-    pset(result, direction, p2);
+    let old = pget(result, p1 + .5);
+    sparsepset(result, subtract(old, direction), p1);
+    sparsepset(result, direction, p2);
   }
   return result;
 }
@@ -467,7 +491,7 @@ function computeAccelerationSlider(slider, system) {
   return slider.n[0] * f[0] + slider.n[1] * f[1];
 }
 
-function computeEffectColinear(colinear, system) {
+function computeEffectColinear(result, colinear, system) {
   var [x, y] = pget(system.positions, colinear.slide);
   var [h, v] = pget(system.velocities, colinear.slide);
 
@@ -498,11 +522,10 @@ function computeEffectColinear(colinear, system) {
 
   var eXbase = -eX - eXref;
   var eYbase = -eY - eYref;
-  let result = new Array(system.positions.length).fill(0);
 
-  pset(result, [eX, eY], colinear.slide);
-  pset(result, [eXref, eYref], colinear.reference);
-  pset(result, [eXbase, eYbase], colinear.base);
+  sparsepset(result, [eX, eY], colinear.slide);
+  sparsepset(result, [eXref, eYref], colinear.reference);
+  sparsepset(result, [eXbase, eYbase], colinear.base);
   return result;
 }
 function computeAccelerationColinear(colinear, system) {
@@ -541,7 +564,7 @@ function computeAccelerationColinear(colinear, system) {
   return -accel;
 }
 
-function computeEffectF2k(f2k, system) {
+function computeEffectF2k(result, f2k, system) {
   var [x, y] = pget(system.positions, f2k.slide);
   var [h, v] = pget(system.velocities, f2k.slide);
 
@@ -561,8 +584,6 @@ function computeEffectF2k(f2k, system) {
   href = href - hbase;
   vref = vref - vbase;
 
-  let result = new Array(system.positions.length).fill(0);
-
   if (yref < 0) {
     if (!f2k.fatmode) {
       var baselength = x;
@@ -574,8 +595,8 @@ function computeEffectF2k(f2k, system) {
     system.stringConstraint = null;
   }
   if (f2k.fatmode) {
-    pset(result, [0, 1], f2k.base);
-    pset(result, [0, f2k.ratio], f2k.reference);
+    sparsepset(result, [0, 1], f2k.base);
+    sparsepset(result, [0, f2k.ratio], f2k.reference);
     return result;
   }
 
@@ -591,8 +612,8 @@ function computeEffectF2k(f2k, system) {
   var eXbase = -eX - eXref;
   var eYbase = -eY - eYref;
 
-  pset(result, [eX, eY], f2k.slide);
-  pset(result, [eXref, eYref], f2k.reference);
+  sparsepset(result, [eX, eY], f2k.slide);
+  sparsepset(result, [eXref, eYref], f2k.reference);
   pset(result, [eXbase, eYbase], f2k.base);
   return result;
 }
