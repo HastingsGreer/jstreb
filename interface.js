@@ -115,8 +115,8 @@ async function doAnimate() {
       constraintI += 1;
     }
     t += ts;
-    var currentConstraints = JSON.parse(constraintLog[1][constraintI]);
-    window.data.constraints = convertBack(currentConstraints);
+    //var currentConstraints = JSON.parse(constraintLog[1][constraintI]);
+    //window.data.constraints = convertBack(currentConstraints);
     for (var i = 0; i < window.data.particles.length; i++) {
       window.data.particles[i].x = traj[2 * i];
       window.data.particles[i].y = traj[2 * i + 1];
@@ -162,12 +162,13 @@ function simulateAndRange() {
     terminate,
   );
   window.constraintLog = constraintLog;
-  var peakLoad = Math.max(
-    ...constraintLog[1]
-      .map(JSON.parse)
-      .map((y) => Math.max(...y.map((x) => Math.abs(x.force))))
-      .slice(1),
-  );
+  //var peakLoad = Math.max(
+  //  ...constraintLog[1]
+  //    .map(JSON.parse)
+  //    .map((y) => Math.max(...y.map((x) => Math.abs(x.force))))
+  //    .slice(1),
+  //);
+  var peakLoad = 0;
 
   var axlecoord = -window.data.particles[window.data.mainaxle].y;
   var mincoord = -window.data.particles[window.data.mainaxle].y;

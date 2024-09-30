@@ -221,7 +221,7 @@ export function rk45(system, y_0, timestep, tfinal) {
       system.stringConstraint = string;
     }
     times.push(t);
-    if (1 | !system.stringConstraint) {
+    if (0 | !system.stringConstraint) {
       system.stringConstraint = JSON.stringify(system.constraints);
     }
     constraintLog.push(system.stringConstraint);
