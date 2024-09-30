@@ -227,6 +227,7 @@ function rk4(system, y_0, timestep, tfinal) {
 export function rk45(system, y_0, timestep, tfinal) {
   var times = [];
   var constraintLog = [];
+  var forceLog = [];
   var fprime = (t, y) => {
     store.clear();
     while (t < times[times.length - 1]) {
@@ -240,6 +241,7 @@ export function rk45(system, y_0, timestep, tfinal) {
       system.stringConstraint = JSON.stringify(system.constraints);
     }
     constraintLog.push(system.stringConstraint);
+    forceLog.push(system.constraintForces);
 
     return dydt(system, y)[0];
   };
@@ -252,7 +254,7 @@ export function rk45(system, y_0, timestep, tfinal) {
     output.push(res.at(t));
     t += timestep;
   }
-  return [output, [times, constraintLog]];
+  return [output, [times, constraintLog], forceLog];
 }
 
 function dvdt(system) {
@@ -307,6 +309,7 @@ function dvdt(system) {
     }
   }
   let constraintForces = naiveSolve(interactions2, desires);
+  system.constraintForces = constraintForces;
   for (var i = 0; i < constraintForces.length; i++) {
     system.constraints[i].force = constraintForces[i];
   }

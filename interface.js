@@ -98,7 +98,7 @@ async function doAnimate() {
     return;
   }
   var reset = JSON.stringify(window.data);
-  var [trajectories, constraintLog] = simulate(
+  var [trajectories, constraintLog, forceLog] = simulate(
     window.data.particles,
     window.data.constraints,
     window.data.timestep,
@@ -154,7 +154,7 @@ function terminate(state) {
 }
 function simulateAndRange() {
   var start = Date.now();
-  const [trajectories, constraintLog] = simulate(
+  const [trajectories, constraintLog, forceLog] = simulate(
     window.data.particles,
     window.data.constraints,
     window.data.timestep,
@@ -162,13 +162,15 @@ function simulateAndRange() {
     terminate,
   );
   window.constraintLog = constraintLog;
+  console.log(forceLog)
   //var peakLoad = Math.max(
   //  ...constraintLog[1]
   //    .map(JSON.parse)
   //    .map((y) => Math.max(...y.map((x) => Math.abs(x.force))))
   //    .slice(1),
   //);
-  var peakLoad = 0;
+  var peakLoad = Math.max(
+	  ...forceLog.slice(1).map((x) => Math.max(...x.map((y) => Math.abs(y)))));
 
   var axlecoord = -window.data.particles[window.data.mainaxle].y;
   var mincoord = -window.data.particles[window.data.mainaxle].y;
