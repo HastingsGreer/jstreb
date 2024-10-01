@@ -232,6 +232,7 @@ export function rk45(system, y_0, timestep, tfinal) {
     store.clear();
     while (t < times[times.length - 1]) {
       times.pop();
+      forceLog.pop();
       var string = constraintLog.pop();
       system.constraints = JSON.parse(string);
       system.stringConstraint = string;
@@ -620,7 +621,7 @@ function computeEffectF2k(result, f2k, system) {
 
   sparsepset(result, [eX, eY], f2k.slide);
   sparsepset(result, [eXref, eYref], f2k.reference);
-  pset(result, [eXbase, eYbase], f2k.base);
+  sparsepset(result, [eXbase, eYbase], f2k.base);
   return result;
 }
 function computeAccelerationF2k(f2k, system) {

@@ -99,6 +99,91 @@
         </div>
       </div>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+<a href="#" id="plotLink">Plot Time Series</a>
+
+    <div id="plotContainer" style="display:none; width:2000px; height:300px">
+        <canvas id="myChart"></canvas>
+    </div>
+
+    <script>
+function transpose(matrix) {
+    return matrix[0].map((_, colIndex) => matrix.map(row => row[colIndex]));
+}
+        const plotLink = document.getElementById('plotLink');
+        const plotContainer = document.getElementById('plotContainer');
+        
+        plotLink.onclick = function(e) {
+            e.preventDefault();
+            try {
+                const data = transpose(window.forceLog.splice(1)) || [[1, 3, 4], [1, 2, 5], [1, 4, 5]];
+                const times = window.constraintLog[0] || data[0].map((_, i) => i);  // Default to index if times not provided
+                plotTimeSeries(data, times);
+            } catch (error) {
+                console.error("Error in onclick handler:", error);
+                alert("An error occurred. Please check the console for details.");
+            }
+        };
+
+        function plotTimeSeries(data, times) {
+            try {
+                plotContainer.style.display = 'block';
+                
+                const ctx = document.getElementById('myChart').getContext('2d');
+                
+                const datasets = data.map((series, index) => ({
+                    label: `Series ${index + 1}`,
+                    data: series.map((value, i) => ({x: times[i], y: value})),
+                    borderColor: getRandomColor(),
+                    fill: false
+                }));
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Time Series Plot'
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                position: 'bottom',
+                                title: {
+                                    display: true,
+                                    text: 'Time (seconds)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toFixed(2) + 's';
+                                    }
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Value'
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error in plotTimeSeries:", error);
+                alert("An error occurred while plotting. Please check the console for details.");
+            }
+        }
+
+        function getRandomColor() {
+            return '#' + Math.floor(Math.random()*16777215).toString(16);
+        }
+    </script>
     <script type="module" src="./interface.js"></script>
   </body>
 </html>

@@ -162,7 +162,7 @@ function simulateAndRange() {
     terminate,
   );
   window.constraintLog = constraintLog;
-  console.log(forceLog)
+  window.forceLog = forceLog
   //var peakLoad = Math.max(
   //  ...constraintLog[1]
   //    .map(JSON.parse)
@@ -1170,7 +1170,7 @@ async function optimizeRange() {
   //wait();
   var optTimeout = 500;
   var timer = optTimeout;
-  var step = 40;
+  var step = 1;
   var oldrange = +document.getElementById("range").innerText;
   while (optimizingRange) {
     var oldDesign = JSON.stringify(window.data);
@@ -1227,7 +1227,7 @@ async function optimize() {
   //wait();
   var optTimeout = 500;
   var timer = optTimeout;
-  var step = 40;
+  var step = 1;
   var oldrange = +document.getElementById("range").innerText;
   var oldload = +document.getElementById("peakLoad").innerText;
   while (optimizing) {
