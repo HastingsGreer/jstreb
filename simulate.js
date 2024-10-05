@@ -396,7 +396,7 @@ function computeEffectRope(result, rope, system) {
       // check for dropping on based on the shape of the rope through the activated pulleys
       var pulley_before = i - 1;
       while (
-        pulley_before > 1 &&
+        pulley_before > 0 &&
         (rope.p2[pulley_before - 1].wrapping == "ccw_drop" ||
           rope.p2[pulley_before - 1].wrapping == "cw_drop")
       ) {
@@ -429,10 +429,14 @@ function computeEffectRope(result, rope, system) {
 
   positions = [];
   positions.push(rope.p1);
+  var index_in_p2 = 0;
+  var indices_in_p2 = [-1];
   for (var pulley of rope.p2) {
     if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
       positions.push(pulley.idx);
+      indices_in_p2.push(index_in_p2);
     }
+    index_in_p2 += 1;
   }
   positions.push(rope.p3);
   for (var i = 1; i < positions.length - 1; i++) {
@@ -444,7 +448,7 @@ function computeEffectRope(result, rope, system) {
       (wedge_ > 0 && rope.p2[i - 1].wrapping == "ccw") ||
       (wedge_ < 0 && rope.p2[i - 1].wrapping == "cw")
     ) {
-      rope.p2.splice(i - 1, 1);
+      rope.p2.splice(indices_in_p2[i], 1);
       system.stringConstraint = null;
       break;
     }
