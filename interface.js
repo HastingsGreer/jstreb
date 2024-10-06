@@ -151,7 +151,7 @@ function terminate(state) {
   var vx = state[2 * window.data.projectile + 2 * window.data.particles.length];
   var vy =
     state[2 * window.data.projectile + 2 * window.data.particles.length + 1];
-  return vx > 40 && vy > 0;
+  return vx > 100 && vy > 0;
 }
 function simulateAndRange() {
   var start = Date.now();
@@ -1185,11 +1185,10 @@ async function optimizeRange2() {
         }
         if (p.y % 10 != 0) {
 	  config.push(p.y)
-        } else {
+        }
           if (p.mass % 1 != 0) {
 		  config.push(p.mass)
           }
-        }
     }
     return config
   }
@@ -1203,12 +1202,12 @@ async function optimizeRange2() {
         if (p.y % 10 != 0) {
 		p.y = config[i]
 		i += 1
-        } else {
+        }
+
           if (p.mass % 1 != 0) {
-		  p.mass = config[i]
+		  p.mass = Math.abs(config[i])
 		  i += 1
           }
-        }
     }
     return config
   }
@@ -1221,13 +1220,9 @@ async function optimizeRange2() {
   var topz = []
   var newz;
 
-  var population_size = 15 * z.length
+  var population_size = 25 * z.length
   while (optimizingRange2) {
 
-    if (timer % 20 == 0) {
-      drawMechanism();
-      await wait();
-    }
 
     if (timer > population_size) {
       topz = topz.slice(0, population_size)
@@ -1245,6 +1240,11 @@ async function optimizeRange2() {
     var zscore = q(newz)
     timer += 1
     topz.push([zscore, newz])
+    if (zscore > topz[0][0]) {
+      
+      drawMechanism();
+      await wait();
+    }
     topz = topz.sort((a, b) => b[0] - a[0])
     z = topz[0][1]
   }
