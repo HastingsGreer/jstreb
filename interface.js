@@ -63,8 +63,8 @@ window.data = {
 async function doit() {
   for (var x = 0; x < 600; x += 5) {
     for (var y = 300; y < 900; y += 5) {
-      window.data.particles[5].x = x;
-      window.data.particles[5].y = y;
+      window.data.particles[2].x = x;
+      window.data.particles[2].y = y;
 
       var [_, range, __, ___] = simulateAndRange();
 
@@ -214,11 +214,39 @@ function simulateAndRange() {
     ) +
       Math.pow(
         window.data.particles[window.data.armtip].y -
-          window.data.particles[window.data.projectile].y,
+          window.data.particles[window.data.mainaxle].y,
         2,
       ),
   );
-  range = (range / Math.max(height1, 0.75 * height2)) * window.data.axleheight;
+  var height3;
+  if (window.data.particles.length > 4 ){
+  height3 = Math.sqrt(
+    Math.pow(
+      window.data.particles[2].x -
+        window.data.particles[window.data.mainaxle].x,
+      2,
+    ) +
+      Math.pow(
+        window.data.particles[2].y -
+          window.data.particles[window.data.mainaxle].y,
+        2,
+      ),
+  ) + Math.sqrt(
+    Math.pow(
+      window.data.particles[2].x -
+        window.data.particles[4].x,
+      2,
+    ) +
+      Math.pow(
+        window.data.particles[2].y -
+          window.data.particles[4].y,
+        2,
+      ),
+  );
+  } else {
+    height3 = 0
+   }
+  range = (range / Math.max(Math.max(height1, 0.75 * height2), height3)) * window.data.axleheight;
   var end = Date.now();
   document.getElementById("simtime").innerText = end - start;
   return [trajectories, range, constraintLog, peakLoad];
@@ -1175,7 +1203,7 @@ async function optimizeRange2() {
   document.getElementById("optimize").innerText = "Stop";
   optimizingRange2 = true;
   //wait();
-  var step = 1;
+  var step = 5;
   var timer = 0;
   function pullconfig() {
 	  var config = []
