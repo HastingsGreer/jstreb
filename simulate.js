@@ -445,8 +445,8 @@ function computeEffectRope(result, rope, system) {
     var p3 = pget(system.positions, positions[i + 1]);
     var wedge_ = wedge(subtract(p1, p2), subtract(p2, p3));
     if (
-      (wedge_ > 0 && rope.p2[i - 1].wrapping == "ccw") ||
-      (wedge_ < 0 && rope.p2[i - 1].wrapping == "cw")
+      (wedge_ > 0 && rope.p2[indices_in_p2[i]].wrapping == "ccw") ||
+      (wedge_ < 0 && rope.p2[indices_in_p2[i]].wrapping == "cw")
     ) {
       rope.p2.splice(indices_in_p2[i], 1);
       system.stringConstraint = null;
