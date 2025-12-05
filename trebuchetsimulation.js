@@ -84,7 +84,35 @@ export function calculateRange(trajectories, data) {
         2
       )
   );
-  range = (range / Math.max(height1, 0.75 * height2)) * data.axleheight;
+  var height3;
+  if (data.particles.length > 4 ){
+  height3 = Math.sqrt(
+    Math.pow(
+      data.particles[2].x -
+        data.particles[data.mainaxle].x,
+      2,
+    ) +
+      Math.pow(
+        data.particles[2].y -
+          data.particles[data.mainaxle].y,
+        2,
+      ),
+  ) + Math.sqrt(
+    Math.pow(
+      data.particles[2].x -
+        data.particles[4].x,
+      2,
+    ) +
+      Math.pow(
+        data.particles[2].y -
+          data.particles[4].y,
+        2,
+      ),
+  );
+  } else {
+    height3 = 0
+   }
+  range = (range / Math.max(Math.max(height1, 0.75 * height2), height3)) * data.axleheight;
 
   return range;
 }
