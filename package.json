@@ -3,12 +3,19 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
+  },
   "dependencies": {
     "prettier": "^3.0.3",
     "vite": "^4.5.0",
     "yarn": "^1.22.19"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "vitest": "^1.1.2"
   }
 }

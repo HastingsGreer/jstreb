@@ -52,7 +52,7 @@ ArrayStore.prototype.clear = function () {
 
 export const store = new ArrayStore();
 
-function tobitvec(vec) {
+export function tobitvec(vec) {
   let res = 0;
   for (var i = 0; i < vec.length; i++) {
     if (vec[i] != 0) {

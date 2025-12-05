@@ -5,3 +5,8 @@ dist
 dist-ssr
 *.local
 *.swp
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
