@@ -35,7 +35,7 @@ test("ground truth values for default preset (Hinged Counterweight)", () => {
   const peakLoad = calculatePeakLoad(forceLog);
 
   // Calculate range
-  const range = calculateRange(trajectories, data);
+  const range = calculateRange(trajectories, data, constraintLog);
 
   // Verify ground truth values (same as Playwright test with ±5 tolerance)
   // Expected values: Range = 331.2 ft, Peak Force = 1020.3 lbf

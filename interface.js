@@ -177,7 +177,7 @@ function simulateAndRange() {
   //    .slice(1),
   //);
   var peakLoad = calculatePeakLoad(forceLog);
-  var range = calculateRange(trajectories, window.data);
+  var range = calculateRange(trajectories, window.data, constraintLog);
   var end = Date.now();
   document.getElementById("simtime").innerText = end - start;
   return [trajectories, range, constraintLog, peakLoad];
@@ -1301,7 +1301,7 @@ async function gentlify() {
     var zscore = q(newz)
     timer += 1
     topz.push([zscore, newz])
-    if (zscore > topz[0][0]) {
+    if (zscore > topz[Math.max(0, topz.length - 2)][0]) {
       
       drawMechanism();
       await wait();

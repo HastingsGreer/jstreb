@@ -1,13 +1,42 @@
-/**
+import { convertBack } from "./simulate";/**
  * Shared trebuchet simulation utilities
  */
 
 const ctypes = ["rod", "pin", "slider", "colinear", "f2k", "rope"];
-
 /**
- * Fill in missing constraint types and handle pin constraints from sliders
- * @param {Object} data - The trebuchet data object
+ * Calculate total energy (kinetic + potential) for a given state
+ * @param {Array} state - The state array [positions..., velocities...]
+ * @param {Array} masses - Array of particle masses
+ * @returns {number} Total energy
  */
+export function calculateEnergy(state, masses) {
+  const numParticles = masses.length;
+
+  let kineticEnergy = 0;
+  let potentialEnergy = 0;
+  const g = 1; // gravity magnitude (from simulate.js forces = [0, -1])
+
+  for (let i = 0; i < numParticles; i++) {
+    const mass = masses[i];
+
+    // Position: y is at index 2*i + 1 (negative because y-axis points down)
+    const y = -state[2 * i + 1];
+
+    // Velocity components at indices after all positions
+    const vx = state[2 * numParticles + 2 * i];
+    const vy = state[2 * numParticles + 2 * i + 1];
+    const vSquared = vx * vx + vy * vy;
+
+    // KE = 0.5 * m * v^2
+    kineticEnergy += 0.5 * mass * vSquared;
+
+    // PE = m * g * h (height)
+    potentialEnergy += mass * g * y;
+  }
+
+  return kineticEnergy + potentialEnergy;
+}
+
 export function fillEmptyConstraints(data) {
   for (const ctype of ctypes) {
     if (data.constraints[ctype] === undefined) {
@@ -15,7 +44,6 @@ export function fillEmptyConstraints(data) {
     }
   }
 
-  // Handle pin constraints from sliders
   const sliderCounts = data.particles.map(() => 0);
   data.constraints.slider.forEach((x) => {
     if (!x.oneway) {
@@ -32,24 +60,48 @@ export function fillEmptyConstraints(data) {
   );
 }
 
-/**
- * Calculate the peak load from force log
- * @param {Array} forceLog - The force log from simulation
- * @returns {number} The peak load
- */
 export function calculatePeakLoad(forceLog) {
   return Math.max(
     ...forceLog.slice(1).map((x) => Math.max(...x.map((y) => Math.abs(y))))
   );
 }
 
-/**
- * Calculate the range from trajectories
- * @param {Array} trajectories - The trajectories from simulation
- * @param {Object} data - The trebuchet data object containing particles and configuration
- * @returns {number} The calculated range
- */
-export function calculateRange(trajectories, data) {
+export function calculateRange(trajectories, data, constraintLog) {
+var 	lastConstraints = JSON.parse(constraintLog[1][constraintLog[1].length - 1]);
+	for (var constraint of lastConstraints) {
+		if (constraint.oneway === true) {
+			console.log("dee");
+			return 0;
+		}
+		if (constraint.name === "Rope") {
+			for (var pulley of constraint.p2) {
+				if (pulley.wrapping != "both") {
+					return 0;
+				}
+			}
+
+		}
+	}
+
+  var earlyConstraint = JSON.parse(constraintLog[1][3]).filter((x) => x.name === "Rope");
+  for (var i = 0; i < earlyConstraint.length; i++) {
+	  if (earlyConstraint[i].p2.length !== data.constraints.rope[i].pulleys.length) {
+		  return 0;
+	  }
+  }
+
+  // energy check
+	//
+	//
+    const masses = data.particles.map(p => p.mass);
+  let starting_energy = calculateEnergy(trajectories[0], masses);
+	let ending_energy = calculateEnergy(trajectories[trajectories.length - 1], masses);
+
+	let energy_error = ((starting_energy - ending_energy) / starting_energy);
+	if (energy_error > 1e-4) {
+		return 0;
+	}
+
   let axlecoord = -data.particles[data.mainaxle].y;
   let mincoord = -data.particles[data.mainaxle].y;
   let range = 0;
