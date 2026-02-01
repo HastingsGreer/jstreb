@@ -46,7 +46,6 @@ class Rod {
     this.p2 = p2;
     this.oneway = oneway;
     this.name = "Rod";
-    this.beep = "meep";
   }
   static computeEffect(result, rod, system) {
     let direction = normalize(
@@ -417,14 +416,7 @@ function System(constraints, masses, positions, velocities) {
 }
 
 export function convertBack(sysConstraints) {
-  let constraints = {
-    rod: [],
-    slider: [],
-    colinear: [],
-    f2k: [],
-    rope: [],
-    pin: [],
-  };
+  let constraints = [];
 
   for (let constraint of sysConstraints) {
     if (constraint.oneway == RELEASED) {
@@ -432,41 +424,46 @@ export function convertBack(sysConstraints) {
     }
     switch (constraint.name) {
       case "Rod":
-        constraints.rod.push({
+        constraints.push({
           p1: constraint.p1,
           p2: constraint.p2,
           oneway: constraint.oneway,
+          name: "rod",
         });
         break;
       case "Slider":
-        constraints.slider.push({
+        constraints.push({
           p: constraint.p,
           normal: { x: constraint.n[0], y: constraint.n[1] },
           oneway: constraint.oneway,
+          name: "slider",
         });
         break;
       case "Colinear":
-        constraints.colinear.push({
+        constraints.push({
           reference: constraint.reference,
           slider: constraint.slide,
           base: constraint.base,
           oneway: constraint.oneway,
+          name: "colinear",
         });
         break;
       case "F2k":
-        constraints.f2k.push({
+        constraints.push({
           reference: constraint.reference,
           slider: constraint.slide,
           base: constraint.base,
+          name: "f2k",
         });
         break;
       case "Rope":
-        constraints.rope.push({
+        constraints.push({
           p1: constraint.p1,
           pulleys: constraint.p2.filter(
             (p) => p.wrapping != "cw_drop" && p.wrapping != "ccw_drop",
           ),
           p3: constraint.p3,
+          name: "rope",
         });
         break;
     }
@@ -490,33 +487,30 @@ export function simulate(
     positions.push(particle.x);
     positions.push(particle.y);
   }
-  for (var rod of constraints.rod) {
-    sysConstraints.push(new Rod(rod.p1, rod.p2, rod.oneway));
-  }
-  for (var slider of constraints.slider) {
-    sysConstraints.push(
-      new Slider(slider.p, [slider.normal.x, slider.normal.y], slider.oneway),
-    );
-  }
-  for (var slider of constraints.pin) {
-    sysConstraints.push(new Slider(slider.p, [0, 1], false));
-    sysConstraints.push(new Slider(slider.p, [1, 0], false));
-  }
-  for (var colinear of constraints.colinear) {
-    sysConstraints.push(
-      new Colinear(
-        colinear.reference,
-        colinear.slider,
-        colinear.base,
-        colinear.oneway,
-      ),
-    );
-  }
-  for (var f2k of constraints.f2k) {
-    sysConstraints.push(new F2k(f2k.reference, f2k.slider, f2k.base));
-  }
-  for (var rope of constraints.rope) {
-    sysConstraints.push(new Rope(rope.p1, rope.pulleys.slice(), rope.p3));
+  for (var rod of constraints) {
+    if (rod.name === "rod") {
+      sysConstraints.push(new Rod(rod.p1, rod.p2, rod.oneway));
+    }
+    if (rod.name === "slider") {
+      sysConstraints.push(
+        new Slider(rod.p, [rod.normal.x, rod.normal.y], rod.oneway),
+      );
+    }
+    if (rod.name === "pin") {
+      sysConstraints.push(new Slider(rod.p, [0, 1], false));
+      sysConstraints.push(new Slider(rod.p, [1, 0], false));
+    }
+    if (rod.name === "colinear") {
+      sysConstraints.push(
+        new Colinear(rod.reference, rod.slider, rod.base, rod.oneway),
+      );
+    }
+    if (rod.name === "f2k") {
+      sysConstraints.push(new F2k(rod.reference, rod.slider, rod.base));
+    }
+    if (rod.name === "rope") {
+      sysConstraints.push(new Rope(rod.p1, rod.pulleys.slice(), rod.p3));
+    }
   }
 
   var system = new System(

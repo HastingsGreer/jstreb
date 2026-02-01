@@ -1,18 +1,11 @@
 import { expect, test } from "vitest";
 import { simulate } from "./simulate.js";
-import {
-  calculateEnergy,
-  fillEmptyConstraints,
-  presets,
-} from "./trebuchetsimulation.js";
+import { calculateEnergy, presets } from "./trebuchetsimulation.js";
 
 test("all presets conserve energy", () => {
   // Loop over all presets
   for (const [presetName, presetJson] of Object.entries(presets)) {
     const data = JSON.parse(presetJson);
-
-    // Fill in missing constraint types
-    fillEmptyConstraints(data);
 
     // Create terminate function (don't terminate early for energy tests)
     function terminate(trajectories) {

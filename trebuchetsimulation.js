@@ -37,29 +37,6 @@ export function calculateEnergy(state, masses) {
   return kineticEnergy + potentialEnergy;
 }
 
-export function fillEmptyConstraints(data) {
-  for (const ctype of ctypes) {
-    if (data.constraints[ctype] === undefined) {
-      data.constraints[ctype] = [];
-    }
-  }
-
-  const sliderCounts = data.particles.map(() => 0);
-  data.constraints.slider.forEach((x) => {
-    if (!x.oneway) {
-      sliderCounts[x.p] += 1;
-    }
-  });
-  data.constraints.slider = data.constraints.slider.filter(
-    (x) => sliderCounts[x.p] < 2,
-  );
-  data.constraints.pin = data.constraints.pin.concat(
-    sliderCounts
-      .flatMap((x, i) => [{ count: x, p: i }])
-      .filter((x) => x.count > 1),
-  );
-}
-
 export function calculatePeakLoad(forceLog) {
   return Math.max(
     ...forceLog.slice(1).map((x) => Math.max(...x.map((y) => Math.abs(y)))),
@@ -72,7 +49,6 @@ export function calculateRange(trajectories, data, constraintLog) {
   );
   for (var constraint of lastConstraints) {
     if (constraint.oneway === true) {
-      console.log("dee");
       return 0;
     }
     if (constraint.name === "Rope") {
@@ -168,7 +144,7 @@ export function calculateRange(trajectories, data, constraintLog) {
 /**
  * Preset trebuchet configurations
  */
-export const presets = {
+export var presets = {
   "Hinged Counterweight":
     '{"projectile":3, "mainaxle":0, "armtip":1, "axleheight":8, "timestep":0.3, "duration":35, "particles":[{"x":536,"y":472.7,"mass":1},{"x":346,"y":657.6,"mass":4},{"x":588,"y":440.7,"mass":10},{"x":668,"y":673.6,"mass":1},{"x":586,"y":533.7,"mass":100}],"constraints":{"rod":[{"p1":0,"p2":1},{"p1":0,"p2":2},{"p1":1,"p2":3},{"p1":2,"p2":4},{"p1":1,"p2":2}],"slider":[{"p":0,"normal":{"x":0,"y":1}},{"p":0,"normal":{"x":0.6,"y":1}},{"p":3,"normal":{"x":0,"y":1},"oneway":true}]}}',
   "Fixed Counterweight":
@@ -191,3 +167,18 @@ export const presets = {
   MURLIN:
     '{"projectile":8,"mainaxle":0,"armtip":1,"axleheight":8,"timestep":0.1,"duration":40,"particles":[{"x":510.98330181224014,"y":585.0346326615387,"mass":1,"hovered":false},{"x":610.8818474508025,"y":509.1784380643879,"mass":1,"hovered":false},{"x":530.7749198606792,"y":582.2639014087384,"mass":1,"hovered":false},{"x":508.2352941176471,"y":627.2941140567556,"mass":1,"hovered":false},{"x":437.64705882352945,"y":593.176466997932,"mass":1,"hovered":false},{"x":477.64705882352945,"y":495.5294081744026,"mass":1,"hovered":false},{"x":648.2352941176471,"y":446.1176434685202,"mass":1,"hovered":false},{"x":648.2352941176471,"y":464.94117288028497,"mass":200,"hovered":false},{"x":462.2625079139531,"y":570.2700562274708,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":2,"p2":1,"hovered":false},{"p1":2,"p2":0,"hovered":false},{"p1":1,"p2":0,"hovered":false},{"p1":3,"p2":2,"hovered":false},{"p1":3,"p2":0,"hovered":false},{"p1":4,"p2":3,"hovered":false},{"p1":4,"p2":0,"hovered":false},{"p1":5,"p2":4,"hovered":false},{"p1":5,"p2":0,"hovered":false},{"p1":8,"p2":1,"hovered":false},{"p1":8,"p2":0,"hovered":false,"oneway":true}],"slider":[],"colinear":[],"f2k":[],"rope":[{"p1":7,"pulleys":[{"idx":6,"wrapping":"ccw"},{"idx":5,"wrapping":"ccw"},{"idx":4,"wrapping":"ccw"},{"idx":3,"wrapping":"ccw"}],"p3":2,"hovered":false}],"pin":[{"count":2,"p":0},{"count":2,"p":6}]}}',
 };
+
+for (var preset in presets) {
+  var raw_preset = JSON.parse(presets[preset]);
+  var old_constraints = raw_preset.constraints;
+  raw_preset.constraints = [];
+  for (var name of ctypes) {
+    if (old_constraints[name]) {
+      for (var constraint of old_constraints[name]) {
+        constraint["name"] = name;
+        raw_preset.constraints.push(constraint);
+      }
+    }
+  }
+  presets[preset] = JSON.stringify(raw_preset);
+}

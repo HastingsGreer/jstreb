@@ -1,6 +1,5 @@
 import { simulate, convertBack } from "./simulate.js";
 import {
-  fillEmptyConstraints,
   calculatePeakLoad,
   calculateRange,
   presets,
@@ -68,7 +67,6 @@ async function waitForAnimationFrame() {
 }
 var ctypes = ["rod", "pin", "slider", "colinear", "f2k", "rope"];
 
-
 class RodUI {
   static draw_trace(rod, trajectory, ctx) {
     if (!rod.oneway) {
@@ -83,8 +81,7 @@ class RodUI {
       ctx.stroke();
     }
   }
-	static draw(c, ctx) {
-		
+  static draw(c, ctx) {
     const p1 = window.data.particles[c.p1];
     const p2 = window.data.particles[c.p2];
     ctx.beginPath();
@@ -92,7 +89,7 @@ class RodUI {
     ctx.lineTo(p2.x, p2.y);
     ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
     ctx.stroke();
-	}
+  }
 }
 class RopeUI {
   static draw_trace(rope, trajectory, ctx) {
@@ -110,7 +107,7 @@ class RopeUI {
     ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
     ctx.stroke();
   }
-	static draw(c, ctx) {
+  static draw(c, ctx) {
     const p1 = window.data.particles[c.p1];
     const p3 = window.data.particles[c.p3];
     ctx.setLineDash([8, 8]);
@@ -124,35 +121,35 @@ class RopeUI {
     ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
     ctx.stroke();
     ctx.setLineDash([]);
-	}
+  }
 }
 
 class SliderUI {
   static draw_trace(slider, trajectory, ctx) {}
-	static draw(c, ctx) {
-      const p = window.data.particles[c.p];
-      const sliderLength = 40; // Length of the slider line
-      const angle = Math.atan2(c.normal.y, c.normal.x) + Math.PI / 2; // Angle of the slider line
-      ctx.beginPath();
-      ctx.moveTo(
-        p.x - sliderLength * Math.cos(angle),
-        p.y - sliderLength * Math.sin(angle),
-      );
-      ctx.lineTo(
-        p.x + sliderLength * Math.cos(angle),
-        p.y + sliderLength * Math.sin(angle),
-      );
-      ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
-      ctx.stroke();
-	}
+  static draw(c, ctx) {
+    const p = window.data.particles[c.p];
+    const sliderLength = 40; // Length of the slider line
+    const angle = Math.atan2(c.normal.y, c.normal.x) + Math.PI / 2; // Angle of the slider line
+    ctx.beginPath();
+    ctx.moveTo(
+      p.x - sliderLength * Math.cos(angle),
+      p.y - sliderLength * Math.sin(angle),
+    );
+    ctx.lineTo(
+      p.x + sliderLength * Math.cos(angle),
+      p.y + sliderLength * Math.sin(angle),
+    );
+    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
+    ctx.stroke();
+  }
 }
 class PinUI {
   static draw_trace(pin, trajectory, ctx) {}
-	static draw(x, ctx) {
-      [
-        { p: x.p, normal: { x: 0, y: 1 } },
-        { p: x.p, normal: { x: 1, y: 0 } },
-      ].map(c => {
+  static draw(x, ctx) {
+    [
+      { p: x.p, normal: { x: 0, y: 1 } },
+      { p: x.p, normal: { x: 1, y: 0 } },
+    ].map((c) => {
       const p = window.data.particles[c.p];
       const sliderLength = 40; // Length of the slider line
       const angle = Math.atan2(c.normal.y, c.normal.x) + Math.PI / 2; // Angle of the slider line
@@ -167,54 +164,61 @@ class PinUI {
       );
       ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
       ctx.stroke();
-      });
-	}
+    });
+  }
 }
 class ColinearUI {
   static draw_trace(c, trajectory, ctx) {}
-	static draw(c, ctx) {
-      const base = window.data.particles[c.base];
-      const reference = window.data.particles[c.reference];
-      const slider = window.data.particles[c.slider];
-      const length = Math.sqrt(
-        (base.x - reference.x) * (base.x - reference.x) +
-          (base.y - reference.y) * (base.y - reference.y),
-      );
+  static draw(c, ctx) {
+    const base = window.data.particles[c.base];
+    const reference = window.data.particles[c.reference];
+    const slider = window.data.particles[c.slider];
+    const length = Math.sqrt(
+      (base.x - reference.x) * (base.x - reference.x) +
+        (base.y - reference.y) * (base.y - reference.y),
+    );
 
-      const sx = (base.x - reference.x) / length;
-      const sy = (base.y - reference.y) / length;
+    const sx = (base.x - reference.x) / length;
+    const sy = (base.y - reference.y) / length;
 
-      const r = Math.abs(sx * (base.y - slider.y) - sy * (base.x - slider.x));
-      ctx.beginPath();
-      ctx.arc(slider.x, slider.y, r, 0, Math.PI * 2);
-      ctx.strokeStyle = "grey";
+    const r = Math.abs(sx * (base.y - slider.y) - sy * (base.x - slider.x));
+    ctx.beginPath();
+    ctx.arc(slider.x, slider.y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = "grey";
 
-      ctx.stroke();
-	}
+    ctx.stroke();
+  }
 }
 class F2kUI {
   static draw_trace(c, trajectory, ctx) {}
-	static draw(c, ctx) {
-      const base = window.data.particles[c.base];
-      const reference = window.data.particles[c.reference];
-      const slider = window.data.particles[c.slider];
-      const length = Math.sqrt(
-        (base.x - reference.x) * (base.x - reference.x) +
-          (base.y - reference.y) * (base.y - reference.y),
-      );
+  static draw(c, ctx) {
+    const base = window.data.particles[c.base];
+    const reference = window.data.particles[c.reference];
+    const slider = window.data.particles[c.slider];
+    const length = Math.sqrt(
+      (base.x - reference.x) * (base.x - reference.x) +
+        (base.y - reference.y) * (base.y - reference.y),
+    );
 
-      const sx = (base.x - reference.x) / length;
-      const sy = (base.y - reference.y) / length;
+    const sx = (base.x - reference.x) / length;
+    const sy = (base.y - reference.y) / length;
 
-      const r = Math.abs(sx * (base.y - slider.y) - sy * (base.x - slider.x));
-      ctx.beginPath();
-      ctx.arc(slider.x, slider.y, r, 0, Math.PI * 2);
-      ctx.strokeStyle = "grey";
+    const r = Math.abs(sx * (base.y - slider.y) - sy * (base.x - slider.x));
+    ctx.beginPath();
+    ctx.arc(slider.x, slider.y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = "grey";
 
-      ctx.stroke();
-	}
+    ctx.stroke();
+  }
 }
-const constraint_UI = {"rod": RodUI, "pin": PinUI, "slider": SliderUI, "colinear": ColinearUI, "f2k": F2kUI, "rope": RopeUI};
+const constraint_UI = {
+  rod: RodUI,
+  pin: PinUI,
+  slider: SliderUI,
+  colinear: ColinearUI,
+  f2k: F2kUI,
+  rope: RopeUI,
+};
 
 async function doAnimate() {
   if (window.data.timestep == 1) {
@@ -329,22 +333,8 @@ function drawMechanism() {
 
   // Draw rods
   window.data.constraints.forEach((c) => {
-	  constraint_UI[c.name].draw(c, ctx)
+    constraint_UI[c.name].draw(c, ctx);
   });
-  window.data.constraints.rope.forEach((c) => {
-  });
-
-  // Draw sliders
-  window.data.constraints.slider
-    .concat(
-    )
-    .forEach((c) => {
-    });
-
-  window.data.constraints.colinear
-    .concat(window.data.constraints.f2k)
-    .forEach((c) => {
-    });
 
   // Reset line width to default if needed elsewhere
   ctx.lineWidth = 1;
@@ -469,8 +459,8 @@ function createConstraint(type) {
     console.error("Unknown constraint type:", type);
     return;
   }
-	constraint.name = type
-	window.data.constraints.push(constraint);
+  constraint.name = type;
+  window.data.constraints.push(constraint);
   updateUI();
 }
 function updatePulley(element, index, pulleyindex) {
@@ -570,9 +560,9 @@ function updateUI() {
     constraintsControl.removeChild(constraintsControl.lastChild);
   }
   // Re-create constraint control boxes
-    window.data.constraints.forEach((_, index) =>
-      createConstraintControlBox(index),
-    );
+  window.data.constraints.forEach((_, index) =>
+    createConstraintControlBox(index),
+  );
   const presetsbox = document.getElementById("presets");
   while (presetsbox.children.length > 0) {
     presetsbox.removeChild(presetsbox.lastChild);
@@ -604,7 +594,17 @@ function updateUI() {
 }
 function loadPreset(element) {
   window.data = JSON.parse(presets[element.value]);
-  fillEmptyConstraints(window.data);
+  console.log(JSON.stringify(window.data));
+  var old_constraints = window.data.constraints;
+  window.data.constraints = [];
+  for (var name of ctypes) {
+    if (old_constraints[name]) {
+      old_constraints[name].forEach((c) => {
+        c.name = name;
+        window.data.constraints.push(c);
+      });
+    }
+  }
   normalizeSize();
 }
 
@@ -693,13 +693,15 @@ function constraintExists(p1, p2) {
   if (p1 == p2) {
     return true;
   }
-  for (var rod of window.data.constraints.rod) {
-    if (
-      (rod.p1 == p1 && rod.p2 == p2) ||
-      (rod.p1 == p2 && rod.p2 == p1) ||
-      p1 == p2
-    ) {
-      return true;
+  for (var rod of window.data.constraints) {
+    if (rod.name === "rod") {
+      if (
+        (rod.p1 == p1 && rod.p2 == p2) ||
+        (rod.p1 == p2 && rod.p2 == p1) ||
+        p1 == p2
+      ) {
+        return true;
+      }
     }
   }
   return false;
@@ -708,10 +710,9 @@ function constraintExists(p1, p2) {
 function createConstraintControlBox(index) {
   const box = document.createElement("div");
   box.className = "control-box";
+  const type = window.data.constraints[index].name;
   box.dataset.type = type;
   box.dataset.index = index;
-
-
 
   if (type === "rod") {
     box.innerHTML = `Rod
@@ -721,14 +722,14 @@ function createConstraintControlBox(index) {
                    .filter(
                      (i) =>
                        !constraintExists(
-                         window.data.constraints.rod[index].p2,
+                         window.data.constraints[index].p2,
                          i,
-                       ) || i == window.data.constraints.rod[index].p1,
+                       ) || i == window.data.constraints[index].p1,
                    )
                    .map(
                      (i) =>
                        `<option value="${i}" ${
-                         i === window.data.constraints.rod[index].p1
+                         i === window.data.constraints[index].p1
                            ? "selected"
                            : ""
                        }>P ${i + 1}</option>`,
@@ -741,14 +742,14 @@ function createConstraintControlBox(index) {
                    .filter(
                      (i) =>
                        !constraintExists(
-                         window.data.constraints.rod[index].p1,
+                         window.data.constraints[index].p1,
                          i,
-                       ) || i == window.data.constraints.rod[index].p2,
+                       ) || i == window.data.constraints[index].p2,
                    )
                    .map(
                      (i) =>
                        `<option value="${i}" ${
-                         i === window.data.constraints.rod[index].p2
+                         i === window.data.constraints[index].p2
                            ? "selected"
                            : ""
                        }>P ${i + 1}</option>`,
@@ -756,13 +757,13 @@ function createConstraintControlBox(index) {
                    .join("")}
                     </select>
 		    One way
-            			<input type="checkbox" oninput="window.data.constraints.rod[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints.rod[index].oneway ? "checked" : ""
+            			<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
+                    window.data.constraints[index].oneway ? "checked" : ""
                   }></input>
                   <button class=delete onclick="deleteConstraint('rod', ${index})">X</button>
                 `;
   } else if (type === "slider") {
-    const slider = window.data.constraints.slider[index];
+    const slider = window.data.constraints[index];
     box.innerHTML = `
                   <label>
             		Slider
@@ -784,10 +785,8 @@ function createConstraintControlBox(index) {
                     slider.normal.y
                   }" oninput="updateConstraint(this, 'slider', ${index}, 'normalY')"></label>
 		  One way
-            			<input type="checkbox" oninput="window.data.constraints.slider[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints.slider[index].oneway
-                      ? "checked"
-                      : ""
+            			<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
+                    window.data.constraints[index].oneway ? "checked" : ""
                   }></input>
                   <button class=delete onclick="deleteConstraint('slider', ${index})">X</button>
                 `;
@@ -1067,7 +1066,6 @@ function loadMechanism() {
   const savedData = localStorage.getItem("mechanismData");
   if (savedData) {
     window.data = JSON.parse(savedData);
-    fillEmptyConstraints(window.data);
     try {
       updateUI();
     } catch {
@@ -1413,7 +1411,6 @@ function load() {
     reader.onload = (readerEvent) => {
       try {
         window.data = JSON.parse(readerEvent.target.result);
-        fillEmptyConstraints(window.data);
         updateUI();
       } catch (error) {
         alert("Error parsing JSON!");
