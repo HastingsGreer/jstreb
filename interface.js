@@ -5,27 +5,13 @@ import {
   calculateRange,
   presets,
 } from "./trebuchetsimulation.js";
-import { sampleGaussian, calculateMean, calculateCovariance, randn, choleskyDecomposition} from "./gaussian.js";
-
-var ctypes = ["rod", "pin", "slider", "colinear", "f2k", "rope"];
-// Prevent scrolling when touching the canvas
-/*
-document.body.addEventListener("touchstart", function (e) {
-    if (e.target == canvas) {
-        e.preventDefault();
-    }
-}, { passive: false });
-document.body.addEventListener("touchend", function (e) {
-    if (e.target == canvas) {
-        e.preventDefault();
-    }
-}, { passive: false });
-document.body.addEventListener("touchmove", function (e) {
-    if (e.target == canvas) {
-        e.preventDefault();
-    }
-}, { passive: false });
-*/
+import {
+  sampleGaussian,
+  calculateMean,
+  calculateCovariance,
+  randn,
+  choleskyDecomposition,
+} from "./gaussian.js";
 
 const canvas = document.getElementById("mechanism");
 canvas.addEventListener("touchstart", function (e) {
@@ -64,27 +50,8 @@ window.data = {
   armtip: 1,
   axleheight: 8,
   particles: [{ x: 100, y: 100, mass: 1, hovered: false }],
-  constraints: { rod: [], slider: [] },
+  constraints: [],
 };
-async function doit() {
-  for (var x = 0; x < 600; x += 5) {
-    for (var y = 300; y < 900; y += 5) {
-      window.data.particles[2].x = x;
-      window.data.particles[2].y = y;
-
-      var [_, range, __, ___] = simulateAndRange();
-
-      ctx.beginPath();
-      ctx.arc(x, y, 4, 0, Math.PI * 2);
-      var r2 = (256 * range) / 40000;
-      ctx.fillStyle = `rgb(${r2}, ${256 * Math.sin(r2 / 10)}, ${r2})`;
-      ctx.fill();
-      if (y % 50 == 0) {
-        await window.waitForAnimationFrame();
-      }
-    }
-  }
-}
 async function wait() {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -99,6 +66,155 @@ async function waitForAnimationFrame() {
     });
   });
 }
+var ctypes = ["rod", "pin", "slider", "colinear", "f2k", "rope"];
+
+
+class RodUI {
+  static draw_trace(rod, trajectory, ctx) {
+    if (!rod.oneway) {
+      const p1Index = rod.p1 * 2; // Index in trajectory array for p1.x and p1.y
+      const p2Index = rod.p2 * 2; // Index in trajectory array for p2.x and p2.y
+
+      // Draw the line for the rod's trajectory
+      ctx.beginPath();
+      ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
+      ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
+      ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
+      ctx.stroke();
+    }
+  }
+	static draw(c, ctx) {
+		
+    const p1 = window.data.particles[c.p1];
+    const p2 = window.data.particles[c.p2];
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
+    ctx.stroke();
+	}
+}
+class RopeUI {
+  static draw_trace(rope, trajectory, ctx) {
+    const p1Index = rope.p1 * 2; // Index in trajectory array for p1.x and p1.y
+    const p3Index = rope.p3 * 2; // Index in trajectory array for p2.x and p2.y
+
+    // Draw the line for the rope's trajectory
+    ctx.beginPath();
+    ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
+    for (var pulley of rope.pulleys) {
+      var p2Index = pulley.idx * 2;
+      ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
+    }
+    ctx.lineTo(trajectory[p3Index], trajectory[p3Index + 1]);
+    ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
+    ctx.stroke();
+  }
+	static draw(c, ctx) {
+    const p1 = window.data.particles[c.p1];
+    const p3 = window.data.particles[c.p3];
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    for (var pulley of c.pulleys) {
+      const p2 = window.data.particles[pulley.idx];
+      ctx.lineTo(p2.x, p2.y);
+    }
+    ctx.lineTo(p3.x, p3.y);
+    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
+    ctx.stroke();
+    ctx.setLineDash([]);
+	}
+}
+
+class SliderUI {
+  static draw_trace(slider, trajectory, ctx) {}
+	static draw(c, ctx) {
+      const p = window.data.particles[c.p];
+      const sliderLength = 40; // Length of the slider line
+      const angle = Math.atan2(c.normal.y, c.normal.x) + Math.PI / 2; // Angle of the slider line
+      ctx.beginPath();
+      ctx.moveTo(
+        p.x - sliderLength * Math.cos(angle),
+        p.y - sliderLength * Math.sin(angle),
+      );
+      ctx.lineTo(
+        p.x + sliderLength * Math.cos(angle),
+        p.y + sliderLength * Math.sin(angle),
+      );
+      ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
+      ctx.stroke();
+	}
+}
+class PinUI {
+  static draw_trace(pin, trajectory, ctx) {}
+	static draw(x, ctx) {
+      [
+        { p: x.p, normal: { x: 0, y: 1 } },
+        { p: x.p, normal: { x: 1, y: 0 } },
+      ].map(c => {
+      const p = window.data.particles[c.p];
+      const sliderLength = 40; // Length of the slider line
+      const angle = Math.atan2(c.normal.y, c.normal.x) + Math.PI / 2; // Angle of the slider line
+      ctx.beginPath();
+      ctx.moveTo(
+        p.x - sliderLength * Math.cos(angle),
+        p.y - sliderLength * Math.sin(angle),
+      );
+      ctx.lineTo(
+        p.x + sliderLength * Math.cos(angle),
+        p.y + sliderLength * Math.sin(angle),
+      );
+      ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
+      ctx.stroke();
+      });
+	}
+}
+class ColinearUI {
+  static draw_trace(c, trajectory, ctx) {}
+	static draw(c, ctx) {
+      const base = window.data.particles[c.base];
+      const reference = window.data.particles[c.reference];
+      const slider = window.data.particles[c.slider];
+      const length = Math.sqrt(
+        (base.x - reference.x) * (base.x - reference.x) +
+          (base.y - reference.y) * (base.y - reference.y),
+      );
+
+      const sx = (base.x - reference.x) / length;
+      const sy = (base.y - reference.y) / length;
+
+      const r = Math.abs(sx * (base.y - slider.y) - sy * (base.x - slider.x));
+      ctx.beginPath();
+      ctx.arc(slider.x, slider.y, r, 0, Math.PI * 2);
+      ctx.strokeStyle = "grey";
+
+      ctx.stroke();
+	}
+}
+class F2kUI {
+  static draw_trace(c, trajectory, ctx) {}
+	static draw(c, ctx) {
+      const base = window.data.particles[c.base];
+      const reference = window.data.particles[c.reference];
+      const slider = window.data.particles[c.slider];
+      const length = Math.sqrt(
+        (base.x - reference.x) * (base.x - reference.x) +
+          (base.y - reference.y) * (base.y - reference.y),
+      );
+
+      const sx = (base.x - reference.x) / length;
+      const sy = (base.y - reference.y) / length;
+
+      const r = Math.abs(sx * (base.y - slider.y) - sy * (base.x - slider.x));
+      ctx.beginPath();
+      ctx.arc(slider.x, slider.y, r, 0, Math.PI * 2);
+      ctx.strokeStyle = "grey";
+
+      ctx.stroke();
+	}
+}
+const constraint_UI = {"rod": RodUI, "pin": PinUI, "slider": SliderUI, "colinear": ColinearUI, "f2k": F2kUI, "rope": RopeUI};
 
 async function doAnimate() {
   if (window.data.timestep == 1) {
@@ -169,13 +285,7 @@ function simulateAndRange() {
     terminate,
   );
   window.constraintLog = constraintLog;
-  window.forceLog = forceLog
-  //var peakLoad = Math.max(
-  //  ...constraintLog[1]
-  //    .map(JSON.parse)
-  //    .map((y) => Math.max(...y.map((x) => Math.abs(x.force))))
-  //    .slice(1),
-  //);
+  window.forceLog = forceLog;
   var peakLoad = calculatePeakLoad(forceLog);
   var range = calculateRange(trajectories, window.data, constraintLog);
   var end = Date.now();
@@ -198,136 +308,42 @@ function drawMechanism() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (
     window.data.particles.length > 1 &&
-    window.data.constraints.rod.length + window.data.constraints.slider.length >
-      1 &&
     window.data.timestep > 0 &&
     typeof window.data.timestep === "number"
   ) {
     var [trajectories, range, constraintLog, peakLoad] = simulateAndRange();
     document.getElementById("range").innerText = range.toFixed(1);
     document.getElementById("peakLoad").innerText = peakLoad.toFixed(1);
-    var t = 0;
-    var constraintI = 0;
     trajectories.forEach((trajectory) => {
-      while (constraintLog[0][constraintI + 1] < t) {
-        constraintI += 1;
-      }
-      t += window.data.timestep;
-      // Draw the trajectories for the rod constraints
-      for (let i = 0; i < window.data.constraints.rod.length; i++) {
-        if (!(window.data.constraints.rod[i].oneway == true)) {
-          const rod = window.data.constraints.rod[i];
-          const p1Index = rod.p1 * 2; // Index in trajectory array for p1.x and p1.y
-          const p2Index = rod.p2 * 2; // Index in trajectory array for p2.x and p2.y
-
-          // Draw the line for the rod's trajectory
-          ctx.beginPath();
-          ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
-          ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
-          ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
-          ctx.stroke();
-        }
-      }
-      for (let i = 0; i < window.data.constraints.rope.length; i++) {
-        if (!(window.data.constraints.rope[i].oneway == true)) {
-          const rope = window.data.constraints.rope[i];
-          const p1Index = rope.p1 * 2; // Index in trajectory array for p1.x and p1.y
-          const p3Index = rope.p3 * 2; // Index in trajectory array for p2.x and p2.y
-
-          // Draw the line for the rope's trajectory
-          ctx.beginPath();
-          ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
-          for (var pulley of window.data.constraints.rope[i].pulleys) {
-            var p2Index = pulley.idx * 2;
-            ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
-          }
-          ctx.lineTo(trajectory[p3Index], trajectory[p3Index + 1]);
-          ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
-          ctx.stroke();
-        }
+      for (let i = 0; i < window.data.constraints.length; i++) {
+        const constraint = window.data.constraints[i];
+        constraint_UI[constraint.name].draw_trace(constraint, trajectory, ctx);
       }
     });
 
     ctx.strokeStyle = "black";
-    //} catch {
-    //  ctx.fillText("Inconsistent Constraints (Duplicate Sliders?)", 300, 100);
-    //}
   }
 
   // Set a thicker line width for rods and sliders
   ctx.lineWidth = 3; // Increase the line width as desired
 
   // Draw rods
-  window.data.constraints.rod.forEach((c) => {
-    const p1 = window.data.particles[c.p1];
-    const p2 = window.data.particles[c.p2];
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
-    ctx.stroke();
+  window.data.constraints.forEach((c) => {
+	  constraint_UI[c.name].draw(c, ctx)
   });
   window.data.constraints.rope.forEach((c) => {
-    const p1 = window.data.particles[c.p1];
-    const p3 = window.data.particles[c.p3];
-    ctx.setLineDash([8, 8]);
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    for (var pulley of c.pulleys) {
-      const p2 = window.data.particles[pulley.idx];
-      ctx.lineTo(p2.x, p2.y);
-    }
-    ctx.lineTo(p3.x, p3.y);
-    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
-    ctx.stroke();
-    ctx.setLineDash([]);
   });
 
   // Draw sliders
   window.data.constraints.slider
     .concat(
-      window.data.constraints.pin.flatMap((x) => [
-        { p: x.p, normal: { x: 0, y: 1 } },
-        { p: x.p, normal: { x: 1, y: 0 } },
-      ]),
     )
     .forEach((c) => {
-      const p = window.data.particles[c.p];
-      const sliderLength = 40; // Length of the slider line
-      const angle = Math.atan2(c.normal.y, c.normal.x) + Math.PI / 2; // Angle of the slider line
-      ctx.beginPath();
-      ctx.moveTo(
-        p.x - sliderLength * Math.cos(angle),
-        p.y - sliderLength * Math.sin(angle),
-      );
-      ctx.lineTo(
-        p.x + sliderLength * Math.cos(angle),
-        p.y + sliderLength * Math.sin(angle),
-      );
-      ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
-      ctx.stroke();
     });
 
   window.data.constraints.colinear
     .concat(window.data.constraints.f2k)
     .forEach((c) => {
-      const base = window.data.particles[c.base];
-      const reference = window.data.particles[c.reference];
-      const slider = window.data.particles[c.slider];
-      const length = Math.sqrt(
-        (base.x - reference.x) * (base.x - reference.x) +
-          (base.y - reference.y) * (base.y - reference.y),
-      );
-
-      const sx = (base.x - reference.x) / length;
-      const sy = (base.y - reference.y) / length;
-
-      const r = Math.abs(sx * (base.y - slider.y) - sy * (base.x - slider.x));
-      ctx.beginPath();
-      ctx.arc(slider.x, slider.y, r, 0, Math.PI * 2);
-      ctx.strokeStyle = "grey";
-
-      ctx.stroke();
     });
 
   // Reset line width to default if needed elsewhere
@@ -424,7 +440,6 @@ function createConstraint(type) {
       }
     }
     constraint = { p1: indices[0][0], p2: indices[0][1], hovered: false }; // Default to the first two window.data.particles
-    window.data.constraints.rod.push(constraint);
   } else if (type === "slider") {
     if (window.data.particles.length < 1) {
       alert("At least one particle is required to create a slider constraint.");
@@ -442,43 +457,40 @@ function createConstraint(type) {
     } else {
       constraint = { p: lastParticle, normal: { x: 0, y: 1 }, hovered: false }; // Default to the first particle and a vertical normal
     }
-    window.data.constraints.slider.push(constraint);
   } else if (type === "colinear") {
     constraint = { reference: 0, slider: 1, base: 2 };
-    window.data.constraints.colinear.push(constraint);
   } else if (type === "pin") {
     constraint = { p: window.data.particles.length - 1 };
-    window.data.constraints.pin.push(constraint);
   } else if (type === "f2k") {
     constraint = { reference: 0, slider: 1, base: 2 };
-    window.data.constraints.f2k.push(constraint);
   } else if (type === "rope") {
     constraint = { p1: 0, pulleys: [], p3: 2 };
-    window.data.constraints.rope.push(constraint);
   } else {
     console.error("Unknown constraint type:", type);
     return;
   }
+	constraint.name = type
+	window.data.constraints.push(constraint);
   updateUI();
 }
 function updatePulley(element, index, pulleyindex) {
   const value = +element.value;
-  const constraint = window.data.constraints.rope[index];
+  const constraint = window.data.constraints[index];
   constraint.pulleys[pulleyindex].idx = value;
   updateUI();
 }
 function updatePulleyDirection(element, index, pulleyindex) {
   const value = element.value;
-  const constraint = window.data.constraints.rope[index];
+  const constraint = window.data.constraints[index];
   constraint.pulleys[pulleyindex].wrapping = value;
   updateUI();
 }
 function removePulley(index) {
-  window.data.constraints.rope[index].pulleys.pop();
+  window.data.constraints[index].pulleys.pop();
   updateUI();
 }
 function addPulley(index) {
-  window.data.constraints.rope[index].pulleys.push({
+  window.data.constraints[index].pulleys.push({
     idx: 0,
     wrapping: "both",
   });
@@ -488,7 +500,7 @@ function updateConstraint(element, type, index, property) {
   const value = property.includes("normal")
     ? parseFloat(element.value)
     : parseInt(element.value);
-  const constraint = window.data.constraints[type][index];
+  const constraint = window.data.constraints[index];
 
   if (property === "p1" || property === "p2" || property === "p") {
     constraint[property] = value;
@@ -502,8 +514,8 @@ function updateConstraint(element, type, index, property) {
   }
 }
 
-function deleteConstraint(type, index) {
-  window.data.constraints[type].splice(index, 1);
+function deleteConstraint(index) {
+  window.data.constraints.splice(index, 1);
   updateUI();
 }
 
@@ -558,11 +570,9 @@ function updateUI() {
     constraintsControl.removeChild(constraintsControl.lastChild);
   }
   // Re-create constraint control boxes
-  for (var ctype of ctypes) {
-    window.data.constraints[ctype].forEach((_, index) =>
-      createConstraintControlBox(ctype, index),
+    window.data.constraints.forEach((_, index) =>
+      createConstraintControlBox(index),
     );
-  }
   const presetsbox = document.getElementById("presets");
   while (presetsbox.children.length > 0) {
     presetsbox.removeChild(presetsbox.lastChild);
@@ -595,7 +605,7 @@ function updateUI() {
 function loadPreset(element) {
   window.data = JSON.parse(presets[element.value]);
   fillEmptyConstraints(window.data);
-  normalizeSize()
+  normalizeSize();
 }
 
 window.normalizeSize = normalizeSize;
@@ -695,11 +705,13 @@ function constraintExists(p1, p2) {
   return false;
 }
 
-function createConstraintControlBox(type, index) {
+function createConstraintControlBox(index) {
   const box = document.createElement("div");
   box.className = "control-box";
   box.dataset.type = type;
   box.dataset.index = index;
+
+
 
   if (type === "rod") {
     box.innerHTML = `Rod
@@ -1075,7 +1087,6 @@ window.onload = () => {
     cache: "no-store",
     mode: "no-cors",
   });
-  //doit();
   //optimize();
   //	setTimeout(optimize, 1000);
 };
@@ -1089,78 +1100,75 @@ async function optimizeRange2() {
   document.getElementById("optimize").innerText = "Stop";
   optimizingRange2 = true;
   //wait();
-  var step = .1;
+  var step = 0.1;
   var timer = 0;
   function pullconfig() {
-	  var config = []
+    var config = [];
     for (var p of window.data.particles.slice(1)) {
-        if (p.x % 10 != 0) {
-          config.push(p.x)
-        }
-        if (p.y % 10 != 0) {
-	  config.push(p.y)
-        }
-          if (p.mass % 1 != 0) {
-		  config.push(p.mass)
-          }
+      if (p.x % 10 != 0) {
+        config.push(p.x);
+      }
+      if (p.y % 10 != 0) {
+        config.push(p.y);
+      }
+      if (p.mass % 1 != 0) {
+        config.push(p.mass);
+      }
     }
-    return config
+    return config;
   }
   function pushconfig(config) {
-	  var i = 0;
+    var i = 0;
     for (var p of window.data.particles.slice(1)) {
-        if (p.x % 10 != 0) {
-	  p.x = config[i]
-	  i += 1;
-        }
-        if (p.y % 10 != 0) {
-		p.y = config[i]
-		i += 1
-        }
+      if (p.x % 10 != 0) {
+        p.x = config[i];
+        i += 1;
+      }
+      if (p.y % 10 != 0) {
+        p.y = config[i];
+        i += 1;
+      }
 
-          if (p.mass % 1 != 0) {
-		  p.mass = Math.abs(config[i])
-		  i += 1
-          }
+      if (p.mass % 1 != 0) {
+        p.mass = Math.abs(config[i]);
+        i += 1;
+      }
     }
-    return config
+    return config;
   }
-  var z = pullconfig()
+  var z = pullconfig();
   function q(config) {
-	  pushconfig(config)
-          var [_, range, _, _oad] = simulateAndRange();
-	  return range
+    pushconfig(config);
+    var [_, range, _, _oad] = simulateAndRange();
+    return range;
   }
-  var topz = []
+  var topz = [];
   var newz;
 
-  var population_size = 25 * z.length
+  var population_size = 25 * z.length;
   while (optimizingRange2) {
-
-
     if (timer > population_size) {
-      topz = topz.slice(0, population_size)
-      var population = topz.map((pair) => pair[1])
+      topz = topz.slice(0, population_size);
+      var population = topz.map((pair) => pair[1]);
 
-      var mean = calculateMean(population)
-      var covariance = calculateCovariance(population, mean)
+      var mean = calculateMean(population);
+      var covariance = calculateCovariance(population, mean);
       //console.log(covariance)
-      var L = choleskyDecomposition(covariance)
-      newz = sampleGaussian(z, L)
+      var L = choleskyDecomposition(covariance);
+      newz = sampleGaussian(z, L);
       //optimizingRange2 = false
     } else {
-      newz = z.map((el) => el + randn() * step)
+      newz = z.map((el) => el + randn() * step);
     }
-    var zscore = q(newz)
-    timer += 1
-    topz.push([zscore, newz])
+    var zscore = q(newz);
+    timer += 1;
+    topz.push([zscore, newz]);
     if (timer % 15 == 1 || zscore > topz[0][0]) {
-
       drawMechanism();
       await wait();
     }
-    topz = topz.sort((a, b) => b[0] - a[0])
-    z = topz[0][1]
+    topz = topz.sort((a, b) => b[0] - a[0]);
+    z = topz[0][1];
   }
   pushconfig(z);
   drawMechanism();
@@ -1190,7 +1198,9 @@ async function optimizeRange() {
           p.y = p.y + step * (0.5 - Math.random());
         } else {
           if (p.mass % 1 != 0) {
-            p.mass = Math.abs(p.mass + p.mass * 0.01 * step * (0.5 - Math.random()));
+            p.mass = Math.abs(
+              p.mass + p.mass * 0.01 * step * (0.5 - Math.random()),
+            );
           }
         }
       }
@@ -1232,82 +1242,79 @@ async function gentlify() {
   document.getElementById("gentlify").innerText = "Stop";
   gentlifying = true;
   //wait();
-  var step = .6;
+  var step = 0.6;
   var timer = 0;
   function pullconfig() {
-	  var config = []
+    var config = [];
     for (var p of window.data.particles.slice(1)) {
-        if (p.x % 10 != 0) {
-          config.push(p.x)
-        }
-        if (p.y % 10 != 0) {
-	  config.push(p.y)
-        }
-          if (p.mass % 1 != 0) {
-		  config.push(p.mass)
-          }
+      if (p.x % 10 != 0) {
+        config.push(p.x);
+      }
+      if (p.y % 10 != 0) {
+        config.push(p.y);
+      }
+      if (p.mass % 1 != 0) {
+        config.push(p.mass);
+      }
     }
-    return config
+    return config;
   }
   function pushconfig(config) {
-	  var i = 0;
+    var i = 0;
     for (var p of window.data.particles.slice(1)) {
-        if (p.x % 10 != 0) {
-	  p.x = config[i]
-	  i += 1;
-        }
-        if (p.y % 10 != 0) {
-		p.y = config[i]
-		i += 1
-        }
+      if (p.x % 10 != 0) {
+        p.x = config[i];
+        i += 1;
+      }
+      if (p.y % 10 != 0) {
+        p.y = config[i];
+        i += 1;
+      }
 
-          if (p.mass % 1 != 0) {
-		  p.mass = Math.abs(config[i])
-		  i += 1
-          }
+      if (p.mass % 1 != 0) {
+        p.mass = Math.abs(config[i]);
+        i += 1;
+      }
     }
-    return config
+    return config;
   }
-  var z = pullconfig()
+  var z = pullconfig();
   function q(config) {
-	  pushconfig(config)
-          var [_, range, _, load] = simulateAndRange();
-    if ( range < oldrange) {
-      return -9999999999999999.
+    pushconfig(config);
+    var [_, range, _, load] = simulateAndRange();
+    if (range < oldrange) {
+      return -9999999999999999;
     }
-	  return -load
+    return -load;
   }
-  var topz = []
+  var topz = [];
   var newz;
 
-  var population_size = 25 * z.length
+  var population_size = 25 * z.length;
   var oldrange = +document.getElementById("range").innerText;
   while (gentlifying) {
-
-
     if (timer > population_size) {
-      topz = topz.slice(0, population_size)
-      var population = topz.map((pair) => pair[1])
+      topz = topz.slice(0, population_size);
+      var population = topz.map((pair) => pair[1]);
 
-      var mean = calculateMean(population)
-      var covariance = calculateCovariance(population, mean)
+      var mean = calculateMean(population);
+      var covariance = calculateCovariance(population, mean);
       //console.log(covariance)
-      var L = choleskyDecomposition(covariance)
-      newz = sampleGaussian(z, L)
+      var L = choleskyDecomposition(covariance);
+      newz = sampleGaussian(z, L);
       //optimizingRange2 = false
     } else {
-      newz = z.map((el) => el + randn() * step)
+      newz = z.map((el) => el + randn() * step);
     }
-    var zscore = q(newz)
-    timer += 1
-    topz.push([zscore, newz])
+    var zscore = q(newz);
+    timer += 1;
+    topz.push([zscore, newz]);
     if (zscore > topz[Math.max(0, topz.length - 2)][0]) {
-      
       drawMechanism();
       await wait();
     }
-    topz = topz.sort((a, b) => b[0] - a[0])
-    z = topz[0][1]
+    topz = topz.sort((a, b) => b[0] - a[0]);
+    z = topz[0][1];
   }
   drawMechanism();
 }
@@ -1446,4 +1453,3 @@ window.updatePulleyDirection = updatePulleyDirection;
 window.addPulley = addPulley;
 window.removePulley = removePulley;
 window.waitForAnimationFrame = waitForAnimationFrame;
-window.doit = doit;

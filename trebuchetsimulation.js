@@ -1,4 +1,4 @@
-import { convertBack } from "./simulate";/**
+import { convertBack } from "./simulate"; /**
  * Shared trebuchet simulation utilities
  */
 
@@ -51,56 +51,64 @@ export function fillEmptyConstraints(data) {
     }
   });
   data.constraints.slider = data.constraints.slider.filter(
-    (x) => sliderCounts[x.p] < 2
+    (x) => sliderCounts[x.p] < 2,
   );
   data.constraints.pin = data.constraints.pin.concat(
     sliderCounts
       .flatMap((x, i) => [{ count: x, p: i }])
-      .filter((x) => x.count > 1)
+      .filter((x) => x.count > 1),
   );
 }
 
 export function calculatePeakLoad(forceLog) {
   return Math.max(
-    ...forceLog.slice(1).map((x) => Math.max(...x.map((y) => Math.abs(y))))
+    ...forceLog.slice(1).map((x) => Math.max(...x.map((y) => Math.abs(y)))),
   );
 }
 
 export function calculateRange(trajectories, data, constraintLog) {
-var 	lastConstraints = JSON.parse(constraintLog[1][constraintLog[1].length - 1]);
-	for (var constraint of lastConstraints) {
-		if (constraint.oneway === true) {
-			console.log("dee");
-			return 0;
-		}
-		if (constraint.name === "Rope") {
-			for (var pulley of constraint.p2) {
-				if (pulley.wrapping != "both") {
-					return 0;
-				}
-			}
+  var lastConstraints = JSON.parse(
+    constraintLog[1][constraintLog[1].length - 1],
+  );
+  for (var constraint of lastConstraints) {
+    if (constraint.oneway === true) {
+      console.log("dee");
+      return 0;
+    }
+    if (constraint.name === "Rope") {
+      for (var pulley of constraint.p2) {
+        if (pulley.wrapping != "both") {
+          return 0;
+        }
+      }
+    }
+  }
 
-		}
-	}
-
-  var earlyConstraint = JSON.parse(constraintLog[1][3]).filter((x) => x.name === "Rope");
+  var earlyConstraint = JSON.parse(constraintLog[1][3]).filter(
+    (x) => x.name === "Rope",
+  );
   for (var i = 0; i < earlyConstraint.length; i++) {
-	  if (earlyConstraint[i].p2.length !== data.constraints.rope[i].pulleys.length) {
-		  return 0;
-	  }
+    if (
+      earlyConstraint[i].p2.length !== data.constraints.rope[i].pulleys.length
+    ) {
+      return 0;
+    }
   }
 
   // energy check
-	//
-	//
-    const masses = data.particles.map(p => p.mass);
+  //
+  //
+  const masses = data.particles.map((p) => p.mass);
   let starting_energy = calculateEnergy(trajectories[0], masses);
-	let ending_energy = calculateEnergy(trajectories[trajectories.length - 1], masses);
+  let ending_energy = calculateEnergy(
+    trajectories[trajectories.length - 1],
+    masses,
+  );
 
-	let energy_error = ((starting_energy - ending_energy) / starting_energy);
-	if (energy_error > 1e-4) {
-		return 0;
-	}
+  let energy_error = (starting_energy - ending_energy) / starting_energy;
+  if (energy_error > 1e-4) {
+    return 0;
+  }
 
   let axlecoord = -data.particles[data.mainaxle].y;
   let mincoord = -data.particles[data.mainaxle].y;
@@ -119,9 +127,9 @@ var 	lastConstraints = JSON.parse(constraintLog[1][constraintLog[1].length - 1])
       2 *
         Math.max(
           0,
-          -trajectory[2 * data.particles.length + 2 * data.projectile + 1]
+          -trajectory[2 * data.particles.length + 2 * data.projectile + 1],
         ) *
-        trajectory[2 * data.particles.length + 2 * data.projectile]
+        trajectory[2 * data.particles.length + 2 * data.projectile],
     );
   }
 
@@ -129,42 +137,30 @@ var 	lastConstraints = JSON.parse(constraintLog[1][constraintLog[1].length - 1])
   const height2 = Math.sqrt(
     Math.pow(
       data.particles[data.armtip].x - data.particles[data.mainaxle].x,
-      2
+      2,
     ) +
       Math.pow(
         data.particles[data.armtip].y - data.particles[data.projectile].y,
-        2
-      )
+        2,
+      ),
   );
   var height3;
-  if (data.particles.length > 4 ){
-  height3 = Math.sqrt(
-    Math.pow(
-      data.particles[2].x -
-        data.particles[data.mainaxle].x,
-      2,
-    ) +
-      Math.pow(
-        data.particles[2].y -
-          data.particles[data.mainaxle].y,
-        2,
-      ),
-  ) + Math.sqrt(
-    Math.pow(
-      data.particles[2].x -
-        data.particles[4].x,
-      2,
-    ) +
-      Math.pow(
-        data.particles[2].y -
-          data.particles[4].y,
-        2,
-      ),
-  );
+  if (data.particles.length > 4) {
+    height3 =
+      Math.sqrt(
+        Math.pow(data.particles[2].x - data.particles[data.mainaxle].x, 2) +
+          Math.pow(data.particles[2].y - data.particles[data.mainaxle].y, 2),
+      ) +
+      Math.sqrt(
+        Math.pow(data.particles[2].x - data.particles[4].x, 2) +
+          Math.pow(data.particles[2].y - data.particles[4].y, 2),
+      );
   } else {
-    height3 = 0
-   }
-  range = (range / Math.max(Math.max(height1, 0.75 * height2), height3)) * data.axleheight;
+    height3 = 0;
+  }
+  range =
+    (range / Math.max(Math.max(height1, 0.75 * height2), height3)) *
+    data.axleheight;
 
   return range;
 }

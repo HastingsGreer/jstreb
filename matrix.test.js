@@ -17,7 +17,7 @@ test("funky sparse matrix routine", () => {
   ];
 
   // Convert to sparse format: [bitvector, val_at_bit0, val_at_bit1, val_at_bit2, val_at_bit3]
-  var sparseA = symmetricA.map(row => [tobitvec(row), ...row]);
+  var sparseA = symmetricA.map((row) => [tobitvec(row), ...row]);
 
   var out1 = naiveMultiply(symmetricA, symmetricA);
   var out2 = multiplyTransposeSameSparsity(sparseA, sparseA);

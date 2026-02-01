@@ -97,14 +97,14 @@ export function sparseDotDivide(a, b) {
   for (let i = 0; i < size1; i++) {
     let ri = result[i];
     let ai = a[i];
-	  ri[0] = ai[0]
-	  var hot = ri[0]
-        while (hot) {
-          var k = 31 - Math.clz32(hot);
-          hot = hot - (1 << k);
+    ri[0] = ai[0];
+    var hot = ri[0];
+    while (hot) {
+      var k = 31 - Math.clz32(hot);
+      hot = hot - (1 << k);
 
-          ri[k + 1]  = ai[k + 1] / b[k];
-        }
+      ri[k + 1] = ai[k + 1] / b[k];
+    }
   }
 
   return result;
@@ -168,8 +168,8 @@ export function multiplyBSparse(a, b) {
     for (let k = 0; k < size2; k++) {
       var hot = b[k][0];
       while (hot) {
-	var j = 31 - Math.clz32(hot);
-	hot = hot - (1 << j)
+        var j = 31 - Math.clz32(hot);
+        hot = hot - (1 << j);
         result[i][j] += a[i][k] * b[k][j + 1];
       }
     }
@@ -177,7 +177,6 @@ export function multiplyBSparse(a, b) {
 
   return result;
 }
-
 
 export function naiveMultiply(a, b) {
   const size1 = a.length;
