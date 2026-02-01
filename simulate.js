@@ -49,11 +49,14 @@ function Rod(p1, p2, oneway) {
   this.name = "Rod";
 }
 
-function Rope(p1, p2, p3) {
+function Rope(p1, p2, p3, oneway) {
   this.p1 = p1;
   this.p2 = JSON.parse(JSON.stringify(p2));
   this.p3 = p3;
   this.name = "Rope";
+  if (oneway) {
+	  this.oneway = oneway
+  }
 }
 
 function F2k(reference, slide, base) {
@@ -186,7 +189,7 @@ export function simulate(
     sysConstraints.push(new F2k(f2k.reference, f2k.slider, f2k.base));
   }
   for (var rope of constraints.rope) {
-    sysConstraints.push(new Rope(rope.p1, rope.pulleys.slice(), rope.p3));
+    sysConstraints.push(new Rope(rope.p1, rope.pulleys.slice(), rope.p3, rope.oneway));
   }
 
   var system = new System(
@@ -467,7 +470,7 @@ function computeEffectRope(result, rope, system) {
     let p2 = positions[i + 1];
 
     let direction = normalize(
-      subtract(pget(system.positions, p1), pget(system.positions, p2)),
+      subtract(pget(system.positions, p2), pget(system.positions, p1)),
     );
     let old = pget(result, p1 + .5);
     sparsepset(result, subtract(old, direction), p1);
@@ -495,7 +498,7 @@ function computeAccelerationRope(rope, system) {
     sum += Math.pow(wedge(r, v), 2) / (l * l * l);
   }
 
-  return sum;
+  return -sum;
 }
 function computeAccelerationSlider(slider, system) {
   var f = pget(system.forces, slider.p);
