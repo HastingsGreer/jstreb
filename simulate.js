@@ -71,11 +71,13 @@ class Rod {
 }
 
 class Rope {
-  constructor(p1, p2, p3) {
+  constructor(p1, p2, p3, oneway) {
     this.p1 = p1;
     this.p2 = JSON.parse(JSON.stringify(p2));
     this.p3 = p3;
     this.name = "Rope";
+    if (oneway) {
+	    this.oneway = oneway}
   }
   static computeEffect(result, rope, system) {
     var positions = [];
@@ -166,7 +168,7 @@ class Rope {
       let p2 = positions[i + 1];
 
       let direction = normalize(
-        subtract(pget(system.positions, p1), pget(system.positions, p2)),
+        subtract(pget(system.positions, p2), pget(system.positions, p1)),
       );
       let old = pget(result, p1 + 0.5);
       sparsepset(result, subtract(old, direction), p1);
@@ -197,7 +199,7 @@ class Rope {
       sum += Math.pow(wedge(r, v), 2) / (l * l * l);
     }
 
-    return sum;
+    return -sum;
   }
 }
 
@@ -509,7 +511,7 @@ export function simulate(
       sysConstraints.push(new F2k(rod.reference, rod.slider, rod.base));
     }
     if (rod.name === "rope") {
-      sysConstraints.push(new Rope(rod.p1, rod.pulleys.slice(), rod.p3));
+      sysConstraints.push(new Rope(rod.p1, rod.pulleys.slice(), rod.p3), rod.oneway);
     }
   }
 
