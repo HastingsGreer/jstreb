@@ -77,7 +77,8 @@ class Rope {
     this.p3 = p3;
     this.name = "Rope";
     if (oneway) {
-	    this.oneway = oneway}
+      this.oneway = oneway;
+    }
   }
   static computeEffect(result, rope, system) {
     var positions = [];
@@ -511,7 +512,9 @@ export function simulate(
       sysConstraints.push(new F2k(rod.reference, rod.slider, rod.base));
     }
     if (rod.name === "rope") {
-      sysConstraints.push(new Rope(rod.p1, rod.pulleys.slice(), rod.p3, rod.oneway));
+      sysConstraints.push(
+        new Rope(rod.p1, rod.pulleys.slice(), rod.p3, rod.oneway),
+      );
     }
   }
 
