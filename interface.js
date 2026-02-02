@@ -1,4 +1,5 @@
 import { simulate, convertBack } from "./simulate.js";
+import { wait, waitForAnimationFrame, canvas } from "./utils.js";
 import {
   calculatePeakLoad,
   calculateRange,
@@ -12,34 +13,6 @@ import {
   choleskyDecomposition,
 } from "./gaussian.js";
 
-const canvas = document.getElementById("mechanism");
-canvas.addEventListener("touchstart", function (e) {
-  var touch = e.touches[0];
-  var mouseEvent = new MouseEvent("mousedown", {
-    clientX: touch.clientX,
-    clientY: touch.clientY,
-  });
-  canvas.dispatchEvent(mouseEvent);
-});
-canvas.addEventListener("touchend", function (_) {
-  var mouseEvent = new MouseEvent("mouseup", {});
-  canvas.dispatchEvent(mouseEvent);
-});
-canvas.addEventListener("touchmove", function (e) {
-  if (e.touches.length > 1) {
-    return;
-  }
-  if (draggedParticleIndex === null) {
-    return;
-  }
-  e.preventDefault();
-  var touch = e.touches[0];
-  var mouseEvent = new MouseEvent("mousemove", {
-    clientX: touch.clientX,
-    clientY: touch.clientY,
-  });
-  canvas.dispatchEvent(mouseEvent);
-});
 const ctx = canvas.getContext("2d");
 window.data = {
   duration: 50,
@@ -51,23 +24,24 @@ window.data = {
   particles: [{ x: 100, y: 100, mass: 1, hovered: false }],
   constraints: [],
 };
-async function wait() {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, 1); // waits for 10 milliseconds
-  });
-}
-async function waitForAnimationFrame() {
-  await new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      resolve();
-    });
-  });
-}
-var ctypes = ["rod", "pin", "slider", "colinear", "f2k", "rope"];
 
 class RodUI {
+  static make_constraint() {
+    if (window.data.particles.length < 2) {
+      alert("At least two particles are required to create a rod constraint.");
+      return;
+    }
+    var indices = [];
+    for (let i = window.data.particles.length - 1; i >= 0; i--) {
+      for (let j = window.data.particles.length - 1; j >= 0; j--) {
+        if (!constraintExists(i, j)) {
+          indices.push([i, j]);
+        }
+      }
+    }
+    var constraint = { p1: indices[0][0], p2: indices[0][1], hovered: false }; // Default to the first two window.data.particles
+    return constraint;
+  }
   static draw_trace(rod, trajectory, ctx) {
     if (!rod.oneway) {
       const p1Index = rod.p1 * 2; // Index in trajectory array for p1.x and p1.y
@@ -92,6 +66,9 @@ class RodUI {
   }
 }
 class RopeUI {
+  static make_constraint() {
+    return { p1: 0, pulleys: [], p3: 2 };
+  }
   static draw_trace(rope, trajectory, ctx) {
     const p1Index = rope.p1 * 2; // Index in trajectory array for p1.x and p1.y
     const p3Index = rope.p3 * 2; // Index in trajectory array for p2.x and p2.y
@@ -125,7 +102,27 @@ class RopeUI {
 }
 
 class SliderUI {
-  static draw_trace(slider, trajectory, ctx) {}
+  static make_constraint() {
+    if (window.data.particles.length < 1) {
+      alert("At least one particle is required to create a slider constraint.");
+      return;
+    }
+    var sliders = window.data.constraints.filter((x) => x.name === "slider");
+    var lastParticle = window.data.particles.length - 1;
+    var constraint;
+    if (
+      sliders.length > 0 &&
+      sliders[sliders.length - 1].p == lastParticle &&
+      sliders[sliders.length - 1].normal.x == 0 &&
+      sliders[sliders.length - 1].normal.y == 1
+    ) {
+      constraint = { p: lastParticle, normal: { x: 1, y: 0 }, hovered: false }; // Default to the first particle and a vertical normal
+    } else {
+      constraint = { p: lastParticle, normal: { x: 0, y: 1 }, hovered: false }; // Default to the first particle and a vertical normal
+    }
+    return constraint;
+  }
+  static draw_trace(_a, _b, _c) {}
   static draw(c, ctx) {
     const p = window.data.particles[c.p];
     const sliderLength = 40; // Length of the slider line
@@ -144,7 +141,11 @@ class SliderUI {
   }
 }
 class PinUI {
-  static draw_trace(pin, trajectory, ctx) {}
+  static make_constraint() {
+    var constraint = { p: window.data.particles.length - 1 };
+    return constraint;
+  }
+  static draw_trace(a_, b_, c_) {}
   static draw(x, ctx) {
     [
       { p: x.p, normal: { x: 0, y: 1 } },
@@ -168,7 +169,11 @@ class PinUI {
   }
 }
 class ColinearUI {
-  static draw_trace(c, trajectory, ctx) {}
+  static make_constraint() {
+    var constraint = { reference: 0, slider: 1, base: 2 };
+    return constraint;
+  }
+  static draw_trace(a_, b_, c_) {}
   static draw(c, ctx) {
     const base = window.data.particles[c.base];
     const reference = window.data.particles[c.reference];
@@ -190,7 +195,11 @@ class ColinearUI {
   }
 }
 class F2kUI {
-  static draw_trace(c, trajectory, ctx) {}
+  static make_constraint() {
+    var constraint = { reference: 0, slider: 1, base: 2 };
+    return constraint;
+  }
+  static draw_trace(a_, b_, c_) {}
   static draw(c, ctx) {
     const base = window.data.particles[c.base];
     const reference = window.data.particles[c.reference];
@@ -225,7 +234,7 @@ async function doAnimate() {
     return;
   }
   var reset = JSON.stringify(window.data);
-  var [trajectories, constraintLog, forceLog] = simulate(
+  var [trajectories, constraintLog, _forceLog] = simulate(
     window.data.particles,
     window.data.constraints,
     window.data.timestep,
@@ -315,7 +324,7 @@ function drawMechanism() {
     window.data.timestep > 0 &&
     typeof window.data.timestep === "number"
   ) {
-    var [trajectories, range, constraintLog, peakLoad] = simulateAndRange();
+    var [trajectories, range, _constraintLog, peakLoad] = simulateAndRange();
     document.getElementById("range").innerText = range.toFixed(1);
     document.getElementById("peakLoad").innerText = peakLoad.toFixed(1);
     trajectories.forEach((trajectory) => {
@@ -413,52 +422,7 @@ function deleteParticle(index) {
   updateUI();
 }
 function createConstraint(type) {
-  let constraint = {};
-
-  // Depending on the type, create a different constraint
-  if (type === "rod") {
-    if (window.data.particles.length < 2) {
-      alert("At least two particles are required to create a rod constraint.");
-      return;
-    }
-    var indices = [];
-    for (let i = window.data.particles.length - 1; i >= 0; i--) {
-      for (let j = window.data.particles.length - 1; j >= 0; j--) {
-        if (!constraintExists(i, j)) {
-          indices.push([i, j]);
-        }
-      }
-    }
-    constraint = { p1: indices[0][0], p2: indices[0][1], hovered: false }; // Default to the first two window.data.particles
-  } else if (type === "slider") {
-    if (window.data.particles.length < 1) {
-      alert("At least one particle is required to create a slider constraint.");
-      return;
-    }
-    var sliders = window.data.constraints.slider;
-    var lastParticle = window.data.particles.length - 1;
-    if (
-      sliders.length > 0 &&
-      sliders[sliders.length - 1].p == lastParticle &&
-      sliders[sliders.length - 1].normal.x == 0 &&
-      sliders[sliders.length - 1].normal.y == 1
-    ) {
-      constraint = { p: lastParticle, normal: { x: 1, y: 0 }, hovered: false }; // Default to the first particle and a vertical normal
-    } else {
-      constraint = { p: lastParticle, normal: { x: 0, y: 1 }, hovered: false }; // Default to the first particle and a vertical normal
-    }
-  } else if (type === "colinear") {
-    constraint = { reference: 0, slider: 1, base: 2 };
-  } else if (type === "pin") {
-    constraint = { p: window.data.particles.length - 1 };
-  } else if (type === "f2k") {
-    constraint = { reference: 0, slider: 1, base: 2 };
-  } else if (type === "rope") {
-    constraint = { p1: 0, pulleys: [], p3: 2 };
-  } else {
-    console.error("Unknown constraint type:", type);
-    return;
-  }
+  var constraint = constraint_UI[type].make_constraint();
   constraint.name = type;
   window.data.constraints.push(constraint);
   updateUI();
@@ -486,7 +450,7 @@ function addPulley(index) {
   });
   updateUI();
 }
-function updateConstraint(element, type, index, property) {
+function updateConstraint(element, index, property) {
   const value = property.includes("normal")
     ? parseFloat(element.value)
     : parseInt(element.value);
@@ -594,17 +558,6 @@ function updateUI() {
 }
 function loadPreset(element) {
   window.data = JSON.parse(presets[element.value]);
-  console.log(JSON.stringify(window.data));
-  var old_constraints = window.data.constraints;
-  window.data.constraints = [];
-  for (var name of ctypes) {
-    if (old_constraints[name]) {
-      old_constraints[name].forEach((c) => {
-        c.name = name;
-        window.data.constraints.push(c);
-      });
-    }
-  }
   normalizeSize();
 }
 
@@ -716,7 +669,7 @@ function createConstraintControlBox(index) {
 
   if (type === "rod") {
     box.innerHTML = `Rod
-                    <select name="p1" onchange="updateConstraint(this, 'rod', ${index}, 'p1')">
+                    <select name="p1" onchange="updateConstraint(this, ${index}, 'p1')">
             	   ${window.data.particles
                    .map((_, i) => i)
                    .filter(
@@ -736,7 +689,7 @@ function createConstraintControlBox(index) {
                    )
                    .join("")}
                     </select>
-                    <select name="p2" onchange="updateConstraint(this, 'rod', ${index}, 'p2')">
+                    <select name="p2" onchange="updateConstraint(this, ${index}, 'p2')">
             	   ${window.data.particles
                    .map((_, i) => i)
                    .filter(
@@ -767,7 +720,7 @@ function createConstraintControlBox(index) {
     box.innerHTML = `
                   <label>
             		Slider
-                    <select name="p" onchange="updateConstraint(this, 'slider', ${index}, 'p')">
+                    <select name="p" onchange="updateConstraint(this, ${index}, 'p')">
                       ${window.data.particles
                         .map(
                           (_, i) =>
@@ -780,10 +733,10 @@ function createConstraintControlBox(index) {
                   </label>
                   <label>Normal X <input type="range" name="normalX" min="-1" max="1" step="0.1" value="${
                     slider.normal.x
-                  }" oninput="updateConstraint(this, 'slider', ${index}, 'normalX')"></label>
+                  }" oninput="updateConstraint(this, ${index}, 'normalX')"></label>
                   <label>Normal Y <input type="range" name="normalY" min="-1" max="1" step="0.1" value="${
                     slider.normal.y
-                  }" oninput="updateConstraint(this, 'slider', ${index}, 'normalY')"></label>
+                  }" oninput="updateConstraint(this, ${index}, 'normalY')"></label>
 		  One way
             			<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
                     window.data.constraints[index].oneway ? "checked" : ""
@@ -792,7 +745,7 @@ function createConstraintControlBox(index) {
                 `;
   } else if (type === "colinear") {
     box.innerHTML = `Roller Track1
-                    <select name="reference" onchange="updateConstraint(this, 'colinear', ${index}, 'reference')">
+                    <select name="reference" onchange="updateConstraint(this, ${index}, 'reference')">
             	   ${window.data.particles
                    .map((_, i) => i)
                    .map(
@@ -806,7 +759,7 @@ function createConstraintControlBox(index) {
                    .join("")}
                     </select>
 		    Slide
-                    <select name="slider" onchange="updateConstraint(this, 'colinear', ${index}, 'slider')">
+                    <select name="slider" onchange="updateConstraint(this, ${index}, 'slider')">
 
             	   ${window.data.particles
                    .map((_, i) => i)
@@ -821,7 +774,7 @@ function createConstraintControlBox(index) {
                    .join("")}
                     </select>
 		    Track2
-                    <select name="base" onchange="updateConstraint(this, 'colinear', ${index}, 'base')">
+                    <select name="base" onchange="updateConstraint(this, ${index}, 'base')">
 
             	   ${window.data.particles
                    .map((_, i) => i)
@@ -843,7 +796,7 @@ function createConstraintControlBox(index) {
                   <button class=delete onclick="deleteConstraint('colinear', ${index})">X</button>
                 `;
   } else if (type === "pin") {
-    box.innerHTML = `Pin <select onchange="updateConstraint(this, 'pin', ${index}, 'p')">${window.data.particles
+    box.innerHTML = `Pin <select onchange="updateConstraint(this, ${index}, 'p')">${window.data.particles
       .map(
         (_, i) =>
           `<option value="${i}" ${
@@ -856,7 +809,7 @@ function createConstraintControlBox(index) {
 		  `;
   } else if (type === "f2k") {
     box.innerHTML = `F2k <label>Arm Tip
-                    <select name="reference" onchange="updateConstraint(this, 'f2k', ${index}, 'reference')">
+                    <select name="reference" onchange="updateConstraint(this, ${index}, 'reference')">
             	   ${window.data.particles
                    .map((_, i) => i)
                    .map(
@@ -871,7 +824,7 @@ function createConstraintControlBox(index) {
                     </select>
 		    </label> <label>
 		    Roller 
-                    <select name="slider" onchange="updateConstraint(this, 'f2k', ${index}, 'slider')">
+                    <select name="slider" onchange="updateConstraint(this, ${index}, 'slider')">
 
             	   ${window.data.particles
                    .map((_, i) => i)
@@ -887,7 +840,7 @@ function createConstraintControlBox(index) {
                     </select>
 		    </label> <label>
 		    Arm Base
-                    <select name="base" onchange="updateConstraint(this, 'f2k', ${index}, 'base')">
+                    <select name="base" onchange="updateConstraint(this, ${index}, 'base')">
 
             	   ${window.data.particles
                    .map((_, i) => i)
@@ -913,7 +866,7 @@ function createConstraintControlBox(index) {
 				Rope and pulley.
 				<label>
 				Fixed end:
-				<select name="p1" onchange="updateConstraint(this, 'rope', ${index}, 'p1')">
+				<select name="p1" onchange="updateConstraint(this, ${index}, 'p1')">
 								${window.data.particles
                   .map((_, i) => i)
                   .map(
@@ -958,7 +911,7 @@ ${["both", "cw", "ccw", "cw_drop", "ccw_drop"]
 <button onclick="addPulley(${index})">+</button>
 <button onclick="removePulley(${index})">-</button>
 <label>Fixed end
-<select name="p3" onchange="updateConstraint(this, 'rope', ${index}, 'p3')">
+<select name="p3" onchange="updateConstraint(this, ${index}, 'p3')">
 
 ${window.data.particles
   .map((_, i) => i)
@@ -979,11 +932,11 @@ ${window.data.particles
   }
 
   box.addEventListener("mouseenter", () => {
-    window.data.constraints[type][index].hovered = true;
+    window.data.constraints[index].hovered = true;
     drawMechanism();
   });
   box.addEventListener("mouseleave", () => {
-    window.data.constraints[type][index].hovered = false;
+    window.data.constraints[index].hovered = false;
     drawMechanism();
   });
   document.getElementById("constraintsControl").appendChild(box);
