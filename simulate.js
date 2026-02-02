@@ -511,7 +511,7 @@ export function simulate(
       sysConstraints.push(new F2k(rod.reference, rod.slider, rod.base));
     }
     if (rod.name === "rope") {
-      sysConstraints.push(new Rope(rod.p1, rod.pulleys.slice(), rod.p3), rod.oneway);
+      sysConstraints.push(new Rope(rod.p1, rod.pulleys.slice(), rod.p3, rod.oneway));
     }
   }
 
