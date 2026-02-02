@@ -318,56 +318,48 @@ class PinUI {
 class ColinearUI {
   static get_html(index) {
     return `Roller Track1
-                    <select name="reference" onchange="updateConstraint(this, ${index}, 'reference')">
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.colinear[index].reference
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    Slide
-                    <select name="slider" onchange="updateConstraint(this, ${index}, 'slider')">
+<select name="reference" onchange="updateConstraint(this, ${index}, 'reference')">
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].reference ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+Slide
+<select name="slider" onchange="updateConstraint(this, ${index}, 'slider')">
 
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.colinear[index].slider
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    Track2
-                    <select name="base" onchange="updateConstraint(this, ${index}, 'base')">
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].slider ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+Track2
+<select name="base" onchange="updateConstraint(this, ${index}, 'base')">
 
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.colinear[index].base
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-            			<input type="checkbox" oninput="window.data.constraints.colinear[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints.colinear[index].oneway
-                      ? "checked"
-                      : ""
-                  }></input>
-                  <button class=delete onclick="deleteConstraint('colinear', ${index})">X</button>
-                `;
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].base ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
+      window.data.constraints[index].oneway ? "checked" : ""
+    }></input>
+<button class=delete onclick="deleteConstraint('colinear', ${index})">X</button>
+`;
   }
   static make_constraint() {
     var constraint = { reference: 0, slider: 1, base: 2 };
@@ -403,7 +395,7 @@ class F2kUI {
                    .map(
                      (i) =>
                        `<option value="${i}" ${
-                         i === window.data.constraints.f2k[index].reference
+                         i === window.data.constraints[index].reference
                            ? "selected"
                            : ""
                        }>P ${i + 1}</option>`,
@@ -419,7 +411,7 @@ class F2kUI {
                    .map(
                      (i) =>
                        `<option value="${i}" ${
-                         i === window.data.constraints.f2k[index].slider
+                         i === window.data.constraints[index].slider
                            ? "selected"
                            : ""
                        }>P ${i + 1}</option>`,
@@ -435,7 +427,7 @@ class F2kUI {
                    .map(
                      (i) =>
                        `<option value="${i}" ${
-                         i === window.data.constraints.f2k[index].base
+                         i === window.data.constraints[index].base
                            ? "selected"
                            : ""
                        }>P ${i + 1}</option>`,
@@ -444,8 +436,8 @@ class F2kUI {
                     </select>
 		    </label> <label>
 		    One way
-            			<input type="checkbox" oninput="window.data.constraints.f2k[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints.f2k[index].oneway ? "checked" : ""
+            			<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
+                    window.data.constraints[index].oneway ? "checked" : ""
                   }></input></label>
                   <button class=delete onclick="deleteConstraint('f2k', ${index})">X</button>
                 `;
@@ -640,31 +632,20 @@ function updateParticle(index, property, value) {
 
 function deleteParticle(index) {
   window.data.particles.splice(index, 1);
-  for (var type1 in window.data.constraints) {
-    var type = window.data.constraints[type1];
-    var done = false;
-    while (!done) {
-      done = true;
-      for (var i = 0; i < type.length; i++) {
-        var constraint = type[i];
-        var present = false;
-        for (var name of [
-          "p",
-          "p1",
-          "p2",
-          "p3",
-          "reference",
-          "base",
-          "slider",
-        ]) {
-          if (constraint[name] === index) {
-            present = true;
-          }
+  var done = false;
+  while (!done) {
+    done = true;
+    for (var i = 0; i < window.data.constraints.length; i++) {
+      var constraint = window.data.constraints[i];
+      var present = false;
+      for (var name of ["p", "p1", "p2", "p3", "reference", "base", "slider"]) {
+        if (constraint[name] === index) {
+          present = true;
         }
-        if (present) {
-          done = false;
-          type.splice(i, 1);
-        }
+      }
+      if (present) {
+        done = false;
+        window.data.constraints.splice(i, 1);
       }
     }
   }
@@ -1183,7 +1164,7 @@ async function gentlify() {
   document.getElementById("gentlify").innerText = "Stop";
   gentlifying = true;
   //wait();
-  var step = 0.6;
+  var step = 0.06;
   var timer = 0;
   function pullconfig() {
     var config = [];
@@ -1271,7 +1252,7 @@ async function optimize() {
   //wait();
   var optTimeout = 500;
   var timer = optTimeout;
-  var step = 3;
+  var step = 0.06;
   var oldrange = +document.getElementById("range").innerText;
   var oldload = +document.getElementById("peakLoad").innerText;
   while (optimizing) {

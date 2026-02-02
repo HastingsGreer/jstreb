@@ -60,14 +60,19 @@ export function calculateRange(trajectories, data, constraintLog) {
     }
   }
 
+  /*
   var earlyConstraint = JSON.parse(constraintLog[1][3]);
+	  if (earlyConstraint.length != data.constraints.length) {
+		  console.log(earlyConstraint.length, data.constraints.length)
+		  return 0
+	  }
   for (var i = 0; i < earlyConstraint.length; i++) {
     if (earlyConstraint[i].name === "Rope") {
       if (earlyConstraint[i].p2.length !== data.constraints[i].pulleys.length) {
         return 0;
       }
     }
-  }
+  }*/
 
   // energy check
   //
