@@ -26,6 +26,47 @@ window.data = {
 };
 
 class RodUI {
+  static get_html(index) {
+    return `Rod
+<select name="p1" onchange="updateConstraint(this, ${index}, 'p1')">
+${window.data.particles
+  .map((_, i) => i)
+  .filter(
+    (i) =>
+      !constraintExists(window.data.constraints[index].p2, i) ||
+      i == window.data.constraints[index].p1,
+  )
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].p1 ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+<select name="p2" onchange="updateConstraint(this, ${index}, 'p2')">
+${window.data.particles
+  .map((_, i) => i)
+  .filter(
+    (i) =>
+      !constraintExists(window.data.constraints[index].p1, i) ||
+      i == window.data.constraints[index].p2,
+  )
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].p2 ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+One way
+<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
+      window.data.constraints[index].oneway ? "checked" : ""
+    }></input>
+<button class=delete onclick="deleteConstraint('rod', ${index})">X</button>
+`;
+  }
   static make_constraint() {
     if (window.data.particles.length < 2) {
       alert("At least two particles are required to create a rod constraint.");
@@ -47,11 +88,10 @@ class RodUI {
       const p1Index = rod.p1 * 2; // Index in trajectory array for p1.x and p1.y
       const p2Index = rod.p2 * 2; // Index in trajectory array for p2.x and p2.y
 
-      // Draw the line for the rod's trajectory
       ctx.beginPath();
       ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
       ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
-      ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
+      ctx.strokeStyle = "rgba(255, 0, 0, 0.2)";
       ctx.stroke();
     }
   }
@@ -61,11 +101,77 @@ class RodUI {
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
+    ctx.strokeStyle = c.hovered ? "yellow" : "black";
     ctx.stroke();
   }
 }
 class RopeUI {
+  static get_html(index) {
+    return ` Rope and pulley.
+<label>
+Fixed end:
+<select name="p1" onchange="updateConstraint(this, ${index}, 'p1')">
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].p1 ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select></label>
+${window.data.constraints[index].pulleys
+  .map(
+    (pulley, j) => `
+<label>Pulley
+<select name="p2" onchange="updatePulley(this, ${index}, ${j})">
+
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${i === pulley.idx ? "selected" : ""}>P ${
+        i + 1
+      }</option>`,
+  )
+  .join("")}
+</select>
+<select onchange="updatePulleyDirection(this, ${index}, ${j})">
+${["both", "cw", "ccw", "cw_drop", "ccw_drop"]
+  .map(
+    (str) =>
+      `<option value=${str} ${
+        str == pulley.wrapping ? "selected" : ""
+      }>${str}</option>`,
+  )
+  .join("")}
+</select></label>
+`,
+  )
+  .join("")}
+<button onclick="addPulley(${index})">+</button>
+<button onclick="removePulley(${index})">-</button>
+<label>Fixed end
+<select name="p3" onchange="updateConstraint(this, ${index}, 'p3')">
+
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].p3 ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+</label>
+<button class=delete onclick="deleteConstraint('rope', ${index})">X</button>
+<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
+      window.data.constraints[index].oneway ? "checked" : ""
+    }></input>
+`;
+  }
   static make_constraint() {
     return { p1: 0, pulleys: [], p3: 2 };
   }
@@ -73,7 +179,6 @@ class RopeUI {
     const p1Index = rope.p1 * 2; // Index in trajectory array for p1.x and p1.y
     const p3Index = rope.p3 * 2; // Index in trajectory array for p2.x and p2.y
 
-    // Draw the line for the rope's trajectory
     ctx.beginPath();
     ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
     for (var pulley of rope.pulleys) {
@@ -95,13 +200,42 @@ class RopeUI {
       ctx.lineTo(p2.x, p2.y);
     }
     ctx.lineTo(p3.x, p3.y);
-    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
+    ctx.strokeStyle = c.hovered ? "yellow" : "black";
     ctx.stroke();
     ctx.setLineDash([]);
   }
 }
 
 class SliderUI {
+  static get_html(index) {
+    const slider = window.data.constraints[index];
+    return `
+<label>
+Slider
+<select name="p" onchange="updateConstraint(this, ${index}, 'p')">
+${window.data.particles
+  .map(
+    (_, i) =>
+      `<option value="${i}" ${i === slider.p ? "selected" : ""}>P ${
+        i + 1
+      }</option>`,
+  )
+  .join("")}
+</select>
+</label>
+<label>Normal X <input type="range" name="normalX" min="-1" max="1" step="0.1" value="${
+      slider.normal.x
+    }" oninput="updateConstraint(this, ${index}, 'normalX')"></label>
+<label>Normal Y <input type="range" name="normalY" min="-1" max="1" step="0.1" value="${
+      slider.normal.y
+    }" oninput="updateConstraint(this, ${index}, 'normalY')"></label>
+One way
+<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
+      window.data.constraints[index].oneway ? "checked" : ""
+    }></input>
+<button class=delete onclick="deleteConstraint('slider', ${index})">X</button>
+`;
+  }
   static make_constraint() {
     if (window.data.particles.length < 1) {
       alert("At least one particle is required to create a slider constraint.");
@@ -118,7 +252,7 @@ class SliderUI {
     ) {
       constraint = { p: lastParticle, normal: { x: 1, y: 0 }, hovered: false }; // Default to the first particle and a vertical normal
     } else {
-      constraint = { p: lastParticle, normal: { x: 0, y: 1 }, hovered: false }; // Default to the first particle and a vertical normal
+      constraint = { p: lastParticle, normal: { x: 0, y: 1 }, hovered: false }; // Default to the first particle and a horizontal normal
     }
     return constraint;
   }
@@ -141,6 +275,19 @@ class SliderUI {
   }
 }
 class PinUI {
+  static get_html(index) {
+    return `Pin
+<select onchange="updateConstraint(this, ${index}, 'p')">${window.data.particles
+      .map(
+        (_, i) =>
+          `<option value="${i}" ${
+            i === window.data.constraints[index].p ? "selected" : ""
+          }>P ${i + 1}</option>`,
+      )
+      .join("")}</select>
+<button class=delete onclick="deleteConstraint('pin', ${index})">X</button>
+`;
+  }
   static make_constraint() {
     var constraint = { p: window.data.particles.length - 1 };
     return constraint;
@@ -169,6 +316,59 @@ class PinUI {
   }
 }
 class ColinearUI {
+  static get_html(index) {
+    return `Roller Track1
+                    <select name="reference" onchange="updateConstraint(this, ${index}, 'reference')">
+            	   ${window.data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === window.data.constraints.colinear[index].reference
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+		    Slide
+                    <select name="slider" onchange="updateConstraint(this, ${index}, 'slider')">
+
+            	   ${window.data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === window.data.constraints.colinear[index].slider
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+		    Track2
+                    <select name="base" onchange="updateConstraint(this, ${index}, 'base')">
+
+            	   ${window.data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === window.data.constraints.colinear[index].base
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+            			<input type="checkbox" oninput="window.data.constraints.colinear[${index}].oneway=this.checked;updateUI()" ${
+                    window.data.constraints.colinear[index].oneway
+                      ? "checked"
+                      : ""
+                  }></input>
+                  <button class=delete onclick="deleteConstraint('colinear', ${index})">X</button>
+                `;
+  }
   static make_constraint() {
     var constraint = { reference: 0, slider: 1, base: 2 };
     return constraint;
@@ -195,6 +395,61 @@ class ColinearUI {
   }
 }
 class F2kUI {
+  static get_html(index) {
+    return `F2k <label>Arm Tip
+                    <select name="reference" onchange="updateConstraint(this, ${index}, 'reference')">
+            	   ${window.data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === window.data.constraints.f2k[index].reference
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+		    </label> <label>
+		    Roller 
+                    <select name="slider" onchange="updateConstraint(this, ${index}, 'slider')">
+
+            	   ${window.data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === window.data.constraints.f2k[index].slider
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+		    </label> <label>
+		    Arm Base
+                    <select name="base" onchange="updateConstraint(this, ${index}, 'base')">
+
+            	   ${window.data.particles
+                   .map((_, i) => i)
+                   .map(
+                     (i) =>
+                       `<option value="${i}" ${
+                         i === window.data.constraints.f2k[index].base
+                           ? "selected"
+                           : ""
+                       }>P ${i + 1}</option>`,
+                   )
+                   .join("")}
+                    </select>
+		    </label> <label>
+		    One way
+            			<input type="checkbox" oninput="window.data.constraints.f2k[${index}].oneway=this.checked;updateUI()" ${
+                    window.data.constraints.f2k[index].oneway ? "checked" : ""
+                  }></input></label>
+                  <button class=delete onclick="deleteConstraint('f2k', ${index})">X</button>
+                `;
+  }
   static make_constraint() {
     var constraint = { reference: 0, slider: 1, base: 2 };
     return constraint;
@@ -468,14 +723,13 @@ function updateConstraint(element, index, property) {
   }
 }
 
-function deleteConstraint(index) {
+function deleteConstraint(_name, index) {
   window.data.constraints.splice(index, 1);
   updateUI();
 }
 
 function resizeCanvas() {
   var wwidth = Math.min(window.screen.width, window.innerWidth);
-  console.log(wwidth);
 
   if (wwidth > 1040) {
     wwidth -= 440;
@@ -667,269 +921,7 @@ function createConstraintControlBox(index) {
   box.dataset.type = type;
   box.dataset.index = index;
 
-  if (type === "rod") {
-    box.innerHTML = `Rod
-                    <select name="p1" onchange="updateConstraint(this, ${index}, 'p1')">
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .filter(
-                     (i) =>
-                       !constraintExists(
-                         window.data.constraints[index].p2,
-                         i,
-                       ) || i == window.data.constraints[index].p1,
-                   )
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints[index].p1
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-                    <select name="p2" onchange="updateConstraint(this, ${index}, 'p2')">
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .filter(
-                     (i) =>
-                       !constraintExists(
-                         window.data.constraints[index].p1,
-                         i,
-                       ) || i == window.data.constraints[index].p2,
-                   )
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints[index].p2
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    One way
-            			<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints[index].oneway ? "checked" : ""
-                  }></input>
-                  <button class=delete onclick="deleteConstraint('rod', ${index})">X</button>
-                `;
-  } else if (type === "slider") {
-    const slider = window.data.constraints[index];
-    box.innerHTML = `
-                  <label>
-            		Slider
-                    <select name="p" onchange="updateConstraint(this, ${index}, 'p')">
-                      ${window.data.particles
-                        .map(
-                          (_, i) =>
-                            `<option value="${i}" ${
-                              i === slider.p ? "selected" : ""
-                            }>P ${i + 1}</option>`,
-                        )
-                        .join("")}
-                    </select>
-                  </label>
-                  <label>Normal X <input type="range" name="normalX" min="-1" max="1" step="0.1" value="${
-                    slider.normal.x
-                  }" oninput="updateConstraint(this, ${index}, 'normalX')"></label>
-                  <label>Normal Y <input type="range" name="normalY" min="-1" max="1" step="0.1" value="${
-                    slider.normal.y
-                  }" oninput="updateConstraint(this, ${index}, 'normalY')"></label>
-		  One way
-            			<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints[index].oneway ? "checked" : ""
-                  }></input>
-                  <button class=delete onclick="deleteConstraint('slider', ${index})">X</button>
-                `;
-  } else if (type === "colinear") {
-    box.innerHTML = `Roller Track1
-                    <select name="reference" onchange="updateConstraint(this, ${index}, 'reference')">
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.colinear[index].reference
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    Slide
-                    <select name="slider" onchange="updateConstraint(this, ${index}, 'slider')">
-
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.colinear[index].slider
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    Track2
-                    <select name="base" onchange="updateConstraint(this, ${index}, 'base')">
-
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.colinear[index].base
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-            			<input type="checkbox" oninput="window.data.constraints.colinear[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints.colinear[index].oneway
-                      ? "checked"
-                      : ""
-                  }></input>
-                  <button class=delete onclick="deleteConstraint('colinear', ${index})">X</button>
-                `;
-  } else if (type === "pin") {
-    box.innerHTML = `Pin <select onchange="updateConstraint(this, ${index}, 'p')">${window.data.particles
-      .map(
-        (_, i) =>
-          `<option value="${i}" ${
-            i === window.data.constraints.pin[index].p ? "selected" : ""
-          }>P ${i + 1}</option>`,
-      )
-      .join("")}</select>
-
-                  <button class=delete onclick="deleteConstraint('pin', ${index})">X</button>
-		  `;
-  } else if (type === "f2k") {
-    box.innerHTML = `F2k <label>Arm Tip
-                    <select name="reference" onchange="updateConstraint(this, ${index}, 'reference')">
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.f2k[index].reference
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    </label> <label>
-		    Roller 
-                    <select name="slider" onchange="updateConstraint(this, ${index}, 'slider')">
-
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.f2k[index].slider
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    </label> <label>
-		    Arm Base
-                    <select name="base" onchange="updateConstraint(this, ${index}, 'base')">
-
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.f2k[index].base
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    </label> <label>
-		    One way
-            			<input type="checkbox" oninput="window.data.constraints.f2k[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints.f2k[index].oneway ? "checked" : ""
-                  }></input></label>
-                  <button class=delete onclick="deleteConstraint('f2k', ${index})">X</button>
-                `;
-  } else if (type === "rope") {
-    box.innerHTML = `
-				Rope and pulley.
-				<label>
-				Fixed end:
-				<select name="p1" onchange="updateConstraint(this, ${index}, 'p1')">
-								${window.data.particles
-                  .map((_, i) => i)
-                  .map(
-                    (i) =>
-                      `<option value="${i}" ${
-                        i === window.data.constraints.rope[index].p1
-                          ? "selected"
-                          : ""
-                      }>P ${i + 1}</option>`,
-                  )
-                  .join("")}
-				</select></label>
-${window.data.constraints.rope[index].pulleys
-  .map(
-    (pulley, j) => `
-<label>Pulley
-<select name="p2" onchange="updatePulley(this, ${index}, ${j})">
-
-${window.data.particles
-  .map((_, i) => i)
-  .map(
-    (i) =>
-      `<option value="${i}" ${i === pulley.idx ? "selected" : ""}>P ${
-        i + 1
-      }</option>`,
-  )
-  .join("")}
-</select>
-<select onchange="updatePulleyDirection(this, ${index}, ${j})">
-${["both", "cw", "ccw", "cw_drop", "ccw_drop"]
-  .map(
-    (str) =>
-      `<option value=${str} ${
-        str == pulley.wrapping ? "selected" : ""
-      }>${str}</option>`,
-  )
-  .join("")}
-</select></label>
-`,
-  )
-  .join("")}
-<button onclick="addPulley(${index})">+</button>
-<button onclick="removePulley(${index})">-</button>
-<label>Fixed end
-<select name="p3" onchange="updateConstraint(this, ${index}, 'p3')">
-
-${window.data.particles
-  .map((_, i) => i)
-  .map(
-    (i) =>
-      `<option value="${i}" ${
-        i === window.data.constraints.rope[index].p3 ? "selected" : ""
-      }>P ${i + 1}</option>`,
-  )
-  .join("")}
-</select>
-</label>
-<button class=delete onclick="deleteConstraint('rope', ${index})">X</button>
-<input type="checkbox" oninput="window.data.constraints.rope[${index}].oneway=this.checked;updateUI()" ${
-      window.data.constraints.rope[index].oneway ? "checked" : ""
-    }></input>
-`;
-  }
+  box.innerHTML = constraint_UI[type].get_html(index);
 
   box.addEventListener("mouseenter", () => {
     window.data.constraints[index].hovered = true;
@@ -961,7 +953,6 @@ function getParticleAtPosition(x, y) {
   return result;
 }
 
-// Set up the event listeners on the canvas
 canvas.addEventListener("mousedown", function (event) {
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width; // relationship bitmap vs. element for X
@@ -1104,7 +1095,6 @@ async function optimizeRange2() {
 
       var mean = calculateMean(population);
       var covariance = calculateCovariance(population, mean);
-      //console.log(covariance)
       var L = choleskyDecomposition(covariance);
       newz = sampleGaussian(z, L);
       //optimizingRange2 = false
