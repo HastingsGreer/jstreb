@@ -45,7 +45,7 @@ class Rod {
     this.p1 = p1;
     this.p2 = p2;
     this.oneway = oneway;
-    this.name = "Rod";
+    this.name = "rod";
   }
   static computeEffect(result, rod, system) {
     let direction = normalize(
@@ -75,7 +75,7 @@ class Rope {
     this.p1 = p1;
     this.pulleys = JSON.parse(JSON.stringify(pulleys));
     this.p3 = p3;
-    this.name = "Rope";
+    this.name = "rope";
     if (oneway) {
       this.oneway = oneway;
     }
@@ -210,7 +210,7 @@ class F2k {
     this.slide = slide;
     this.base = base;
     this.fatmode = false;
-    this.name = "F2k";
+    this.name = "f2k";
   }
 
   static computeEffect(result, f2k, system) {
@@ -314,7 +314,7 @@ class Colinear {
     this.slide = slide;
     this.base = base;
     this.oneway = oneway;
-    this.name = "Colinear";
+    this.name = "colinear";
   }
 
   static computeEffect(result, colinear, system) {
@@ -396,7 +396,7 @@ class Slider {
     this.p = p;
     this.n = normalize(n);
     this.oneway = oneway;
-    this.name = "Slider";
+    this.name = "slider";
   }
   static computeEffect(result, slider, system) {
     sparsepset(result, slider.n, slider.p);
@@ -408,7 +408,13 @@ class Slider {
   }
 }
 
-const constraintTypes = { Rope, Rod, Colinear, Slider, F2k };
+const constraintTypes = {
+  rope: Rope,
+  rod: Rod,
+  colinear: Colinear,
+  slider: Slider,
+  f2k: F2k,
+};
 
 function System(constraints, masses, positions, velocities) {
   this.forces = Array(masses.length).fill([0, -1]).flat(); // Assuming a default force
@@ -426,15 +432,7 @@ export function convertBack(sysConstraints) {
       continue;
     }
     switch (constraint.name) {
-      case "Rod":
-        constraints.push({
-          p1: constraint.p1,
-          p2: constraint.p2,
-          oneway: constraint.oneway,
-          name: "rod",
-        });
-        break;
-      case "Slider":
+      case "slider":
         constraints.push({
           p: constraint.p,
           normal: { x: constraint.n[0], y: constraint.n[1] },
@@ -442,24 +440,7 @@ export function convertBack(sysConstraints) {
           name: "slider",
         });
         break;
-      case "Colinear":
-        constraints.push({
-          reference: constraint.reference,
-          slide: constraint.slide,
-          base: constraint.base,
-          oneway: constraint.oneway,
-          name: "colinear",
-        });
-        break;
-      case "F2k":
-        constraints.push({
-          reference: constraint.reference,
-          slide: constraint.slide,
-          base: constraint.base,
-          name: "f2k",
-        });
-        break;
-      case "Rope":
+      case "rope":
         constraints.push({
           p1: constraint.p1,
           pulleys: constraint.pulleys.filter(
@@ -468,6 +449,9 @@ export function convertBack(sysConstraints) {
           p3: constraint.p3,
           name: "rope",
         });
+        break;
+      default:
+        constraints.push(JSON.parse(JSON.stringify(constraint)));
         break;
     }
   }
@@ -491,30 +475,22 @@ export function simulate(
     positions.push(particle.y);
   }
   for (var rod of constraints) {
-    if (rod.name === "rod") {
-      sysConstraints.push(new Rod(rod.p1, rod.p2, rod.oneway));
-    }
     if (rod.name === "slider") {
       sysConstraints.push(
         new Slider(rod.p, [rod.normal.x, rod.normal.y], rod.oneway),
       );
-    }
-    if (rod.name === "pin") {
+    } else if (rod.name === "pin") {
       sysConstraints.push(new Slider(rod.p, [0, 1], false));
       sysConstraints.push(new Slider(rod.p, [1, 0], false));
-    }
-    if (rod.name === "colinear") {
-      sysConstraints.push(
-        new Colinear(rod.reference, rod.slide, rod.base, rod.oneway),
-      );
-    }
-    if (rod.name === "f2k") {
-      sysConstraints.push(new F2k(rod.reference, rod.slide, rod.base));
-    }
-    if (rod.name === "rope") {
-      sysConstraints.push(
-        new Rope(rod.p1, rod.pulleys.slice(), rod.p3, rod.oneway),
-      );
+    } else if (rod.name === "body") {
+      var pulleys = rod.pulleys.map((x) => x.idx);
+      sysConstraints.push(new Rod(pulleys[0], pulleys[1]));
+      for (var index = 2; index < pulleys.length; index++) {
+        sysConstraints.push(new Rod(pulleys[index], pulleys[index - 1]));
+        sysConstraints.push(new Rod(pulleys[index], pulleys[index - 2]));
+      }
+    } else {
+      sysConstraints.push(JSON.parse(JSON.stringify(rod)));
     }
   }
 

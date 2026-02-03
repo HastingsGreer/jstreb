@@ -205,6 +205,62 @@ ${window.data.particles
     ctx.setLineDash([]);
   }
 }
+class BodyUI {
+  static get_html(index) {
+    return ` Rigid Body 
+${window.data.constraints[index].pulleys
+  .map(
+    (pulley, j) => `
+<select name="p2" onchange="updatePulley(this, ${index}, ${j})">
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${i === pulley.idx ? "selected" : ""}>P ${
+        i + 1
+      }</option>`,
+  )
+  .join("")}
+</select>
+`,
+  )
+  .join("")}
+<button onclick="addPulley(${index})">+</button>
+<button onclick="removePulley(${index})">-</button>
+<button class=delete onclick="deleteConstraint('rope', ${index})">X</button>
+`;
+  }
+  static make_constraint() {
+    return { pulleys: [{ idx: 0 }, { idx: 1 }] };
+  }
+  static draw_trace(rope, trajectory, ctx) {
+    ctx.beginPath();
+    var lastIndex = rope.pulleys[rope.pulleys.length - 1].idx * 2;
+    ctx.moveTo(trajectory[lastIndex], trajectory[lastIndex + 1]);
+    for (var pulley of rope.pulleys) {
+      var p2Index = pulley.idx * 2;
+      ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
+    }
+    ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
+    ctx.stroke();
+  }
+  static draw(c, ctx) {
+    ctx.beginPath();
+
+    var lastIndex = c.pulleys[c.pulleys.length - 1].idx;
+    var p = window.data.particles[lastIndex];
+    ctx.moveTo(p.x, p.y);
+    for (var pulley of c.pulleys) {
+      const p2 = window.data.particles[pulley.idx];
+      ctx.lineTo(p2.x, p2.y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = "gray";
+    ctx.fill();
+    ctx.strokeStyle = "gray";
+    ctx.stroke();
+  }
+}
 
 class SliderUI {
   static get_html(index) {
@@ -468,7 +524,17 @@ const constraint_UI = {
   colinear: ColinearUI,
   f2k: F2kUI,
   rope: RopeUI,
+  body: BodyUI,
 };
+
+for (var name in constraint_UI) {
+  const box = document.createElement("span");
+  var capsname = name[0].toUpperCase() + name.slice(1);
+
+  box.innerHTML = `<button onclick="createConstraint('${name}')">+ ${capsname}</button>`;
+
+  document.getElementById("addConstraintControl").appendChild(box);
+}
 
 async function doAnimate() {
   if (window.data.timestep == 1) {
@@ -582,7 +648,11 @@ function drawMechanism() {
   ctx.lineWidth = 3; // Increase the line width as desired
 
   // Draw rods
-  window.data.constraints.forEach((c) => {
+
+  var temp_constraints = window.data.constraints.slice();
+  temp_constraints.sort((a, b) => a.name > b.name);
+
+  temp_constraints.forEach((c) => {
     constraint_UI[c.name].draw(c, ctx);
   });
 
@@ -616,6 +686,8 @@ function drawMechanism() {
 function createParticle() {
   const particle = { x: 100, y: 100, mass: 1, hovered: false }; // Default values
   window.data.particles.push(particle);
+  draggedParticleIndex = window.data.particles.length - 1;
+  canvas.style.cursor = "move";
   updateUI();
 }
 
@@ -840,27 +912,21 @@ function createParticleControlBox(index) {
   const box = document.createElement("div");
   box.className = "control-box";
   box.innerHTML = `
-                P ${
-                  1 + index
-                } <label>Mass <input type="text" min="1" max="500" value="${
-                  window.data.particles[index].mass
-                }" oninput="updateParticle(${index}, 'mass', this.value)"></label>
-                <label>X <input type="text" min="0" max="${
-                  canvas.width
-                }" value="${
-                  window.data.particles[index].x
-                }" oninput="updateParticle(${index}, 'x', this.value)"></label>
-                <label>Y <input type="text" min="0" max="${
-                  canvas.height
-                }" value="${
-                  window.data.particles[index].y
-                }" oninput="updateParticle(${index}, 'y', this.value)"></label>
-                ${
-                  index == data.particles.length - 1
-                    ? `<button class=delete onclick="deleteParticle(${index})">X</button>`
-                    : ``
-                }
-              `;
+			P ${1 + index} <label>Mass <input type="text" min="1" max="500" value="${
+        window.data.particles[index].mass
+      }" oninput="updateParticle(${index}, 'mass', this.value)"></label>
+			<label>X <input type="text" min="0" max="${canvas.width}" value="${
+        window.data.particles[index].x
+      }" oninput="updateParticle(${index}, 'x', this.value)"></label>
+			<label>Y <input type="text" min="0" max="${canvas.height}" value="${
+        window.data.particles[index].y
+      }" oninput="updateParticle(${index}, 'y', this.value)"></label>
+			${
+        index == data.particles.length - 1
+          ? `<button class=delete onclick="deleteParticle(${index})">X</button>`
+          : ``
+      }
+		      `;
   box.addEventListener("mouseenter", () => {
     window.data.particles[index].hovered = true;
     drawMechanism();

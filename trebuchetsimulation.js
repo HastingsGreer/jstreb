@@ -2,7 +2,6 @@ import { convertBack } from "./simulate"; /**
  * Shared trebuchet simulation utilities
  */
 
-const ctypes = ["rod", "pin", "slider", "colinear", "f2k", "rope"];
 /**
  * Calculate total energy (kinetic + potential) for a given state
  * @param {Array} state - The state array [positions..., velocities...]
@@ -171,10 +170,36 @@ export var presets = {
     '{"projectile":8,"mainaxle":0,"armtip":1,"axleheight":8,"timestep":0.1,"duration":40,"particles":[{"x":510.98330181224014,"y":585.0346326615387,"mass":1,"hovered":false},{"x":610.8818474508025,"y":509.1784380643879,"mass":1,"hovered":false},{"x":530.7749198606792,"y":582.2639014087384,"mass":1,"hovered":false},{"x":508.2352941176471,"y":627.2941140567556,"mass":1,"hovered":false},{"x":437.64705882352945,"y":593.176466997932,"mass":1,"hovered":false},{"x":477.64705882352945,"y":495.5294081744026,"mass":1,"hovered":false},{"x":648.2352941176471,"y":446.1176434685202,"mass":1,"hovered":false},{"x":648.2352941176471,"y":464.94117288028497,"mass":200,"hovered":false},{"x":462.2625079139531,"y":570.2700562274708,"mass":1,"hovered":false}],"constraints":{"rod":[{"p1":2,"p2":1,"hovered":false},{"p1":2,"p2":0,"hovered":false},{"p1":1,"p2":0,"hovered":false},{"p1":3,"p2":2,"hovered":false},{"p1":3,"p2":0,"hovered":false},{"p1":4,"p2":3,"hovered":false},{"p1":4,"p2":0,"hovered":false},{"p1":5,"p2":4,"hovered":false},{"p1":5,"p2":0,"hovered":false},{"p1":8,"p2":1,"hovered":false},{"p1":8,"p2":0,"hovered":false,"oneway":true}],"slider":[],"colinear":[],"f2k":[],"rope":[{"p1":7,"pulleys":[{"idx":6,"wrapping":"ccw"},{"idx":5,"wrapping":"ccw"},{"idx":4,"wrapping":"ccw"},{"idx":3,"wrapping":"ccw"}],"p3":2,"hovered":false}],"pin":[{"count":2,"p":0},{"count":2,"p":6}]}}',
 };
 
+const ctypes = ["rod", "pin", "slider", "colinear", "f2k", "rope"];
+function fillEmptyConstraints(data) {
+  for (const ctype of ctypes) {
+    if (data.constraints[ctype] === undefined) {
+      data.constraints[ctype] = [];
+    }
+  }
+
+  const sliderCounts = data.particles.map(() => 0);
+  data.constraints.slider.forEach((x) => {
+    if (!x.oneway) {
+      sliderCounts[x.p] += 1;
+    }
+  });
+  data.constraints.slider = data.constraints.slider.filter(
+    (x) => sliderCounts[x.p] < 2,
+  );
+  data.constraints.pin = data.constraints.pin.concat(
+    sliderCounts
+      .flatMap((x, i) => [{ count: x, p: i }])
+      .filter((x) => x.count > 1),
+  );
+}
 for (var preset in presets) {
   var raw_preset = JSON.parse(presets[preset]);
+  fillEmptyConstraints(raw_preset);
+
   var old_constraints = raw_preset.constraints;
   raw_preset.constraints = [];
+
   for (var name of ctypes) {
     if (old_constraints[name]) {
       for (var constraint of old_constraints[name]) {
