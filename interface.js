@@ -317,7 +317,7 @@ class PinUI {
 }
 class ColinearUI {
   static get_html(index) {
-    return `Roller Track1
+    return `Roller Reference
 <select name="reference" onchange="updateConstraint(this, ${index}, 'reference')">
 ${window.data.particles
   .map((_, i) => i)
@@ -330,19 +330,19 @@ ${window.data.particles
   .join("")}
 </select>
 Slide
-<select name="slider" onchange="updateConstraint(this, ${index}, 'slider')">
+<select name="slide" onchange="updateConstraint(this, ${index}, 'slide')">
 
 ${window.data.particles
   .map((_, i) => i)
   .map(
     (i) =>
       `<option value="${i}" ${
-        i === window.data.constraints[index].slider ? "selected" : ""
+        i === window.data.constraints[index].slide ? "selected" : ""
       }>P ${i + 1}</option>`,
   )
   .join("")}
 </select>
-Track2
+Base
 <select name="base" onchange="updateConstraint(this, ${index}, 'base')">
 
 ${window.data.particles
@@ -362,14 +362,14 @@ ${window.data.particles
 `;
   }
   static make_constraint() {
-    var constraint = { reference: 0, slider: 1, base: 2 };
+    var constraint = { reference: 0, slide: 1, base: 2 };
     return constraint;
   }
   static draw_trace(a_, b_, c_) {}
   static draw(c, ctx) {
     const base = window.data.particles[c.base];
     const reference = window.data.particles[c.reference];
-    const slider = window.data.particles[c.slider];
+    const slider = window.data.particles[c.slide];
     const length = Math.sqrt(
       (base.x - reference.x) * (base.x - reference.x) +
         (base.y - reference.y) * (base.y - reference.y),
@@ -389,68 +389,62 @@ ${window.data.particles
 class F2kUI {
   static get_html(index) {
     return `F2k <label>Arm Tip
-                    <select name="reference" onchange="updateConstraint(this, ${index}, 'reference')">
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints[index].reference
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    </label> <label>
-		    Roller 
-                    <select name="slider" onchange="updateConstraint(this, ${index}, 'slider')">
+<select name="reference" onchange="updateConstraint(this, ${index}, 'reference')">
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].reference ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+</label> <label>
+Roller 
+<select name="slide" onchange="updateConstraint(this, ${index}, 'slide')">
 
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints[index].slider
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    </label> <label>
-		    Arm Base
-                    <select name="base" onchange="updateConstraint(this, ${index}, 'base')">
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].slide ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+</label> <label>
+Arm Base
+<select name="base" onchange="updateConstraint(this, ${index}, 'base')">
 
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints[index].base
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    </label> <label>
-		    One way
-            			<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints[index].oneway ? "checked" : ""
-                  }></input></label>
-                  <button class=delete onclick="deleteConstraint('f2k', ${index})">X</button>
-                `;
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].base ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+</label> <label>
+One way
+<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
+      window.data.constraints[index].oneway ? "checked" : ""
+    }></input></label>
+<button class=delete onclick="deleteConstraint('f2k', ${index})">X</button>
+`;
   }
   static make_constraint() {
-    var constraint = { reference: 0, slider: 1, base: 2 };
+    var constraint = { reference: 0, slide: 1, base: 2 };
     return constraint;
   }
   static draw_trace(a_, b_, c_) {}
   static draw(c, ctx) {
     const base = window.data.particles[c.base];
     const reference = window.data.particles[c.reference];
-    const slider = window.data.particles[c.slider];
+    const slider = window.data.particles[c.slide];
     const length = Math.sqrt(
       (base.x - reference.x) * (base.x - reference.x) +
         (base.y - reference.y) * (base.y - reference.y),
@@ -533,7 +527,7 @@ function terminate(state) {
   var vx = state[2 * window.data.projectile + 2 * window.data.particles.length];
   var vy =
     state[2 * window.data.projectile + 2 * window.data.particles.length + 1];
-  return vx > 100 && vy > 0;
+  return vx > 100 && vy > -vx;
 }
 function simulateAndRange() {
   var start = Date.now();
@@ -638,7 +632,7 @@ function deleteParticle(index) {
     for (var i = 0; i < window.data.constraints.length; i++) {
       var constraint = window.data.constraints[i];
       var present = false;
-      for (var name of ["p", "p1", "p2", "p3", "reference", "base", "slider"]) {
+      for (var name of ["p", "p1", "p2", "p3", "reference", "base", "slide"]) {
         if (constraint[name] === index) {
           present = true;
         }
@@ -1164,7 +1158,7 @@ async function gentlify() {
   document.getElementById("gentlify").innerText = "Stop";
   gentlifying = true;
   //wait();
-  var step = 0.06;
+  var step = 0.006;
   var timer = 0;
   function pullconfig() {
     var config = [];

@@ -71,9 +71,9 @@ class Rod {
 }
 
 class Rope {
-  constructor(p1, p2, p3, oneway) {
+  constructor(p1, pulleys, p3, oneway) {
     this.p1 = p1;
-    this.p2 = JSON.parse(JSON.stringify(p2));
+    this.pulleys = JSON.parse(JSON.stringify(pulleys));
     this.p3 = p3;
     this.name = "Rope";
     if (oneway) {
@@ -83,15 +83,15 @@ class Rope {
   static computeEffect(result, rope, system) {
     var positions = [];
     positions.push(rope.p1);
-    for (var pulley of rope.p2) {
+    for (var pulley of rope.pulleys) {
       positions.push(pulley.idx);
     }
     positions.push(rope.p3);
 
     for (var i = 1; i < positions.length - 1; i++) {
       if (
-        rope.p2[i - 1].wrapping == "ccw_drop" ||
-        rope.p2[i - 1].wrapping == "cw_drop"
+        rope.pulleys[i - 1].wrapping == "ccw_drop" ||
+        rope.pulleys[i - 1].wrapping == "cw_drop"
       ) {
         // turn on pulleys as they drop onto the rope
 
@@ -99,16 +99,16 @@ class Rope {
         var pulley_before = i - 1;
         while (
           pulley_before > 0 &&
-          (rope.p2[pulley_before - 1].wrapping == "ccw_drop" ||
-            rope.p2[pulley_before - 1].wrapping == "cw_drop")
+          (rope.pulleys[pulley_before - 1].wrapping == "ccw_drop" ||
+            rope.pulleys[pulley_before - 1].wrapping == "cw_drop")
         ) {
           pulley_before -= 1;
         }
         var pulley_after = i + 1;
         while (
           pulley_after < positions.length - 2 &&
-          (rope.p2[pulley_after - 1].wrapping == "ccw_drop" ||
-            rope.p2[pulley_after - 1].wrapping == "cw_drop")
+          (rope.pulleys[pulley_after - 1].wrapping == "ccw_drop" ||
+            rope.pulleys[pulley_after - 1].wrapping == "cw_drop")
         ) {
           pulley_after += 1;
         }
@@ -119,10 +119,10 @@ class Rope {
         var wedge_ = wedge(subtract(p1, p2), subtract(p2, p3));
 
         if (
-          (wedge_ > 0 && rope.p2[i - 1].wrapping == "ccw_drop") ||
-          (wedge_ < 0 && rope.p2[i - 1].wrapping == "cw_drop")
+          (wedge_ > 0 && rope.pulleys[i - 1].wrapping == "ccw_drop") ||
+          (wedge_ < 0 && rope.pulleys[i - 1].wrapping == "cw_drop")
         ) {
-          rope.p2[i - 1].wrapping = "both";
+          rope.pulleys[i - 1].wrapping = "both";
           system.stringConstraint = null;
           break;
         }
@@ -131,14 +131,14 @@ class Rope {
 
     positions = [];
     positions.push(rope.p1);
-    var index_in_p2 = 0;
-    var indices_in_p2 = [-1];
-    for (var pulley of rope.p2) {
+    var index_in_pulleys = 0;
+    var indices_in_pulleys = [-1];
+    for (var pulley of rope.pulleys) {
       if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
         positions.push(pulley.idx);
-        indices_in_p2.push(index_in_p2);
+        indices_in_pulleys.push(index_in_pulleys);
       }
-      index_in_p2 += 1;
+      index_in_pulleys += 1;
     }
     positions.push(rope.p3);
     for (var i = 1; i < positions.length - 1; i++) {
@@ -147,17 +147,17 @@ class Rope {
       var p3 = pget(system.positions, positions[i + 1]);
       var wedge_ = wedge(subtract(p1, p2), subtract(p2, p3));
       if (
-        (wedge_ > 0 && rope.p2[indices_in_p2[i]].wrapping == "ccw") ||
-        (wedge_ < 0 && rope.p2[indices_in_p2[i]].wrapping == "cw")
+        (wedge_ > 0 && rope.pulleys[indices_in_pulleys[i]].wrapping == "ccw") ||
+        (wedge_ < 0 && rope.pulleys[indices_in_pulleys[i]].wrapping == "cw")
       ) {
-        rope.p2.splice(indices_in_p2[i], 1);
+        rope.pulleys.splice(indices_in_pulleys[i], 1);
         system.stringConstraint = null;
         break;
       }
     }
     positions = [];
     positions.push(rope.p1);
-    for (var pulley of rope.p2) {
+    for (var pulley of rope.pulleys) {
       if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
         positions.push(pulley.idx);
       }
@@ -181,7 +181,7 @@ class Rope {
     var sum = 0;
     var positions = [];
     positions.push(rope.p1);
-    for (var pulley of rope.p2) {
+    for (var pulley of rope.pulleys) {
       if (!(pulley.wrapping == "ccw_drop") && !(pulley.wrapping == "cw_drop")) {
         positions.push(pulley.idx);
       }
@@ -445,7 +445,7 @@ export function convertBack(sysConstraints) {
       case "Colinear":
         constraints.push({
           reference: constraint.reference,
-          slider: constraint.slide,
+          slide: constraint.slide,
           base: constraint.base,
           oneway: constraint.oneway,
           name: "colinear",
@@ -454,7 +454,7 @@ export function convertBack(sysConstraints) {
       case "F2k":
         constraints.push({
           reference: constraint.reference,
-          slider: constraint.slide,
+          slide: constraint.slide,
           base: constraint.base,
           name: "f2k",
         });
@@ -462,7 +462,7 @@ export function convertBack(sysConstraints) {
       case "Rope":
         constraints.push({
           p1: constraint.p1,
-          pulleys: constraint.p2.filter(
+          pulleys: constraint.pulleys.filter(
             (p) => p.wrapping != "cw_drop" && p.wrapping != "ccw_drop",
           ),
           p3: constraint.p3,
@@ -505,11 +505,11 @@ export function simulate(
     }
     if (rod.name === "colinear") {
       sysConstraints.push(
-        new Colinear(rod.reference, rod.slider, rod.base, rod.oneway),
+        new Colinear(rod.reference, rod.slide, rod.base, rod.oneway),
       );
     }
     if (rod.name === "f2k") {
-      sysConstraints.push(new F2k(rod.reference, rod.slider, rod.base));
+      sysConstraints.push(new F2k(rod.reference, rod.slide, rod.base));
     }
     if (rod.name === "rope") {
       sysConstraints.push(
