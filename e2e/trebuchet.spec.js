@@ -34,7 +34,7 @@ test.describe("Trebuchet Designer", () => {
     // Check constraint controls
     await expect(page.getByRole("button", { name: "+ Rod" })).toBeVisible();
     await expect(page.getByRole("button", { name: "+ Slider" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "+ Roller" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "+ Colinear" })).toBeVisible();
     await expect(page.getByRole("button", { name: "+ Rope" })).toBeVisible();
     await expect(page.getByRole("button", { name: "+ Pin" })).toBeVisible();
   });

@@ -1224,7 +1224,7 @@ async function gentlify() {
   document.getElementById("gentlify").innerText = "Stop";
   gentlifying = true;
   //wait();
-  var step = 0.006;
+  var step = 0.6;
   var timer = 0;
   function pullconfig() {
     var config = [];
