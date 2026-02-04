@@ -583,7 +583,7 @@ function dvdt(system) {
     system.forces,
   );
   for (var i = 0; i < constraintForces.length; i++) {
-    if (constraintForces[i] > 0 && system.constraints[i].oneway === true) {
+    if (constraintForces[i] > 0.000001 && system.constraints[i].oneway === true) {
       system.constraints[i].oneway = RELEASED;
       system.stringConstraint = null;
       break;
