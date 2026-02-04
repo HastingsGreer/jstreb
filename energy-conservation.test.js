@@ -1,14 +1,11 @@
 import { expect, test } from "vitest";
 import { simulate } from "./simulate.js";
-import { calculateEnergy, fillEmptyConstraints, presets } from "./trebuchetsimulation.js";
+import { calculateEnergy, presets } from "./trebuchetsimulation.js";
 
 test("all presets conserve energy", () => {
   // Loop over all presets
   for (const [presetName, presetJson] of Object.entries(presets)) {
     const data = JSON.parse(presetJson);
-
-    // Fill in missing constraint types
-    fillEmptyConstraints(data);
 
     // Create terminate function (don't terminate early for energy tests)
     function terminate(trajectories) {
@@ -21,14 +18,16 @@ test("all presets conserve energy", () => {
       data.constraints,
       data.timestep,
       data.duration,
-      terminate
+      terminate,
     );
 
     // Extract masses
-    const masses = data.particles.map(p => p.mass);
+    const masses = data.particles.map((p) => p.mass);
 
     // Calculate energy at multiple time steps
-    const energies = trajectories.map(state => calculateEnergy(state, masses));
+    const energies = trajectories.map((state) =>
+      calculateEnergy(state, masses),
+    );
 
     // The initial energy should be conserved throughout
     const initialEnergy = energies[0];

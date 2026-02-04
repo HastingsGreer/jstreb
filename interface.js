@@ -1,60 +1,18 @@
 import { simulate, convertBack } from "./simulate.js";
+import { wait, waitForAnimationFrame, canvas } from "./utils.js";
 import {
-  fillEmptyConstraints,
   calculatePeakLoad,
   calculateRange,
   presets,
 } from "./trebuchetsimulation.js";
-import { sampleGaussian, calculateMean, calculateCovariance, randn, choleskyDecomposition} from "./gaussian.js";
+import {
+  sampleGaussian,
+  calculateMean,
+  calculateCovariance,
+  randn,
+  choleskyDecomposition,
+} from "./gaussian.js";
 
-var ctypes = ["rod", "pin", "slider", "colinear", "f2k", "rope"];
-// Prevent scrolling when touching the canvas
-/*
-document.body.addEventListener("touchstart", function (e) {
-    if (e.target == canvas) {
-        e.preventDefault();
-    }
-}, { passive: false });
-document.body.addEventListener("touchend", function (e) {
-    if (e.target == canvas) {
-        e.preventDefault();
-    }
-}, { passive: false });
-document.body.addEventListener("touchmove", function (e) {
-    if (e.target == canvas) {
-        e.preventDefault();
-    }
-}, { passive: false });
-*/
-
-const canvas = document.getElementById("mechanism");
-canvas.addEventListener("touchstart", function (e) {
-  var touch = e.touches[0];
-  var mouseEvent = new MouseEvent("mousedown", {
-    clientX: touch.clientX,
-    clientY: touch.clientY,
-  });
-  canvas.dispatchEvent(mouseEvent);
-});
-canvas.addEventListener("touchend", function (_) {
-  var mouseEvent = new MouseEvent("mouseup", {});
-  canvas.dispatchEvent(mouseEvent);
-});
-canvas.addEventListener("touchmove", function (e) {
-  if (e.touches.length > 1) {
-    return;
-  }
-  if (draggedParticleIndex === null) {
-    return;
-  }
-  e.preventDefault();
-  var touch = e.touches[0];
-  var mouseEvent = new MouseEvent("mousemove", {
-    clientX: touch.clientX,
-    clientY: touch.clientY,
-  });
-  canvas.dispatchEvent(mouseEvent);
-});
 const ctx = canvas.getContext("2d");
 window.data = {
   duration: 50,
@@ -64,40 +22,518 @@ window.data = {
   armtip: 1,
   axleheight: 8,
   particles: [{ x: 100, y: 100, mass: 1, hovered: false }],
-  constraints: { rod: [], slider: [] },
+  constraints: [],
 };
-async function doit() {
-  for (var x = 0; x < 600; x += 5) {
-    for (var y = 300; y < 900; y += 5) {
-      window.data.particles[2].x = x;
-      window.data.particles[2].y = y;
 
-      var [_, range, __, ___] = simulateAndRange();
-
-      ctx.beginPath();
-      ctx.arc(x, y, 4, 0, Math.PI * 2);
-      var r2 = (256 * range) / 40000;
-      ctx.fillStyle = `rgb(${r2}, ${256 * Math.sin(r2 / 10)}, ${r2})`;
-      ctx.fill();
-      if (y % 50 == 0) {
-        await window.waitForAnimationFrame();
+class RodUI {
+  static get_html(index) {
+    return `Rod
+<select name="p1" onchange="updateConstraint(this, ${index}, 'p1')">
+${window.data.particles
+  .map((_, i) => i)
+  .filter(
+    (i) =>
+      !constraintExists(window.data.constraints[index].p2, i) ||
+      i == window.data.constraints[index].p1,
+  )
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].p1 ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+<select name="p2" onchange="updateConstraint(this, ${index}, 'p2')">
+${window.data.particles
+  .map((_, i) => i)
+  .filter(
+    (i) =>
+      !constraintExists(window.data.constraints[index].p1, i) ||
+      i == window.data.constraints[index].p2,
+  )
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].p2 ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+One way
+<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
+      window.data.constraints[index].oneway ? "checked" : ""
+    }></input>
+<button class=delete onclick="deleteConstraint('rod', ${index})">X</button>
+`;
+  }
+  static make_constraint() {
+    if (window.data.particles.length < 2) {
+      alert("At least two particles are required to create a rod constraint.");
+      return;
+    }
+    var indices = [];
+    for (let i = window.data.particles.length - 1; i >= 0; i--) {
+      for (let j = window.data.particles.length - 1; j >= 0; j--) {
+        if (!constraintExists(i, j)) {
+          indices.push([i, j]);
+        }
       }
     }
+    var constraint = { p1: indices[0][0], p2: indices[0][1], hovered: false }; // Default to the first two window.data.particles
+    return constraint;
+  }
+  static draw_trace(rod, trajectory, ctx) {
+    if (!rod.oneway) {
+      const p1Index = rod.p1 * 2; // Index in trajectory array for p1.x and p1.y
+      const p2Index = rod.p2 * 2; // Index in trajectory array for p2.x and p2.y
+
+      ctx.beginPath();
+      ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
+      ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
+      ctx.strokeStyle = "rgba(255, 0, 0, 0.2)";
+      ctx.stroke();
+    }
+  }
+  static draw(c, ctx) {
+    const p1 = window.data.particles[c.p1];
+    const p2 = window.data.particles[c.p2];
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = c.hovered ? "yellow" : "black";
+    ctx.stroke();
   }
 }
-async function wait() {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, 1); // waits for 10 milliseconds
-  });
+class RopeUI {
+  static get_html(index) {
+    return ` Rope and pulley.
+<label>
+Fixed end:
+<select name="p1" onchange="updateConstraint(this, ${index}, 'p1')">
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].p1 ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select></label>
+${window.data.constraints[index].pulleys
+  .map(
+    (pulley, j) => `
+<label>Pulley
+<select name="p2" onchange="updatePulley(this, ${index}, ${j})">
+
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${i === pulley.idx ? "selected" : ""}>P ${
+        i + 1
+      }</option>`,
+  )
+  .join("")}
+</select>
+<select onchange="updatePulleyDirection(this, ${index}, ${j})">
+${["both", "cw", "ccw", "cw_drop", "ccw_drop"]
+  .map(
+    (str) =>
+      `<option value=${str} ${
+        str == pulley.wrapping ? "selected" : ""
+      }>${str}</option>`,
+  )
+  .join("")}
+</select></label>
+`,
+  )
+  .join("")}
+<button onclick="addPulley(${index})">+</button>
+<button onclick="removePulley(${index})">-</button>
+<label>Fixed end
+<select name="p3" onchange="updateConstraint(this, ${index}, 'p3')">
+
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].p3 ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+</label>
+<button class=delete onclick="deleteConstraint('rope', ${index})">X</button>
+<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
+      window.data.constraints[index].oneway ? "checked" : ""
+    }></input>
+`;
+  }
+  static make_constraint() {
+    return { p1: 0, pulleys: [], p3: 2 };
+  }
+  static draw_trace(rope, trajectory, ctx) {
+    const p1Index = rope.p1 * 2; // Index in trajectory array for p1.x and p1.y
+    const p3Index = rope.p3 * 2; // Index in trajectory array for p2.x and p2.y
+
+    ctx.beginPath();
+    ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
+    for (var pulley of rope.pulleys) {
+      var p2Index = pulley.idx * 2;
+      ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
+    }
+    ctx.lineTo(trajectory[p3Index], trajectory[p3Index + 1]);
+    ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
+    ctx.stroke();
+  }
+  static draw(c, ctx) {
+    const p1 = window.data.particles[c.p1];
+    const p3 = window.data.particles[c.p3];
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    for (var pulley of c.pulleys) {
+      const p2 = window.data.particles[pulley.idx];
+      ctx.lineTo(p2.x, p2.y);
+    }
+    ctx.lineTo(p3.x, p3.y);
+    ctx.strokeStyle = c.hovered ? "yellow" : "black";
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 }
-async function waitForAnimationFrame() {
-  await new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      resolve();
+class BodyUI {
+  static get_html(index) {
+    return ` Rigid Body 
+${window.data.constraints[index].pulleys
+  .map(
+    (pulley, j) => `
+<select name="p2" onchange="updatePulley(this, ${index}, ${j})">
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${i === pulley.idx ? "selected" : ""}>P ${
+        i + 1
+      }</option>`,
+  )
+  .join("")}
+</select>
+`,
+  )
+  .join("")}
+<button onclick="addPulley(${index})">+</button>
+<button onclick="removePulley(${index})">-</button>
+<button class=delete onclick="deleteConstraint('rope', ${index})">X</button>
+`;
+  }
+  static make_constraint() {
+    return { pulleys: [{ idx: 0 }, { idx: 1 }] };
+  }
+  static draw_trace(rope, trajectory, ctx) {
+    ctx.beginPath();
+    var lastIndex = rope.pulleys[rope.pulleys.length - 1].idx * 2;
+    ctx.moveTo(trajectory[lastIndex], trajectory[lastIndex + 1]);
+    for (var pulley of rope.pulleys) {
+      var p2Index = pulley.idx * 2;
+      ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
+    }
+    ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
+    ctx.stroke();
+  }
+  static draw(c, ctx) {
+    ctx.beginPath();
+
+    var lastIndex = c.pulleys[c.pulleys.length - 1].idx;
+    var p = window.data.particles[lastIndex];
+    ctx.moveTo(p.x, p.y);
+    for (var pulley of c.pulleys) {
+      const p2 = window.data.particles[pulley.idx];
+      ctx.lineTo(p2.x, p2.y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = "gray";
+    ctx.fill();
+    ctx.strokeStyle = "gray";
+    ctx.stroke();
+  }
+}
+
+class SliderUI {
+  static get_html(index) {
+    const slider = window.data.constraints[index];
+    return `
+<label>
+Slider
+<select name="p" onchange="updateConstraint(this, ${index}, 'p')">
+${window.data.particles
+  .map(
+    (_, i) =>
+      `<option value="${i}" ${i === slider.p ? "selected" : ""}>P ${
+        i + 1
+      }</option>`,
+  )
+  .join("")}
+</select>
+</label>
+<label>Normal X <input type="range" name="normalX" min="-1" max="1" step="0.1" value="${
+      slider.normal.x
+    }" oninput="updateConstraint(this, ${index}, 'normalX')"></label>
+<label>Normal Y <input type="range" name="normalY" min="-1" max="1" step="0.1" value="${
+      slider.normal.y
+    }" oninput="updateConstraint(this, ${index}, 'normalY')"></label>
+One way
+<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
+      window.data.constraints[index].oneway ? "checked" : ""
+    }></input>
+<button class=delete onclick="deleteConstraint('slider', ${index})">X</button>
+`;
+  }
+  static make_constraint() {
+    if (window.data.particles.length < 1) {
+      alert("At least one particle is required to create a slider constraint.");
+      return;
+    }
+    var sliders = window.data.constraints.filter((x) => x.name === "slider");
+    var lastParticle = window.data.particles.length - 1;
+    var constraint;
+    if (
+      sliders.length > 0 &&
+      sliders[sliders.length - 1].p == lastParticle &&
+      sliders[sliders.length - 1].normal.x == 0 &&
+      sliders[sliders.length - 1].normal.y == 1
+    ) {
+      constraint = { p: lastParticle, normal: { x: 1, y: 0 }, hovered: false }; // Default to the first particle and a vertical normal
+    } else {
+      constraint = { p: lastParticle, normal: { x: 0, y: 1 }, hovered: false }; // Default to the first particle and a horizontal normal
+    }
+    return constraint;
+  }
+  static draw_trace(_a, _b, _c) {}
+  static draw(c, ctx) {
+    const p = window.data.particles[c.p];
+    const sliderLength = 40; // Length of the slider line
+    const angle = Math.atan2(c.normal.y, c.normal.x) + Math.PI / 2; // Angle of the slider line
+    ctx.beginPath();
+    ctx.moveTo(
+      p.x - sliderLength * Math.cos(angle),
+      p.y - sliderLength * Math.sin(angle),
+    );
+    ctx.lineTo(
+      p.x + sliderLength * Math.cos(angle),
+      p.y + sliderLength * Math.sin(angle),
+    );
+    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
+    ctx.stroke();
+  }
+}
+class PinUI {
+  static get_html(index) {
+    return `Pin
+<select onchange="updateConstraint(this, ${index}, 'p')">${window.data.particles
+      .map(
+        (_, i) =>
+          `<option value="${i}" ${
+            i === window.data.constraints[index].p ? "selected" : ""
+          }>P ${i + 1}</option>`,
+      )
+      .join("")}</select>
+<button class=delete onclick="deleteConstraint('pin', ${index})">X</button>
+`;
+  }
+  static make_constraint() {
+    var constraint = { p: window.data.particles.length - 1 };
+    return constraint;
+  }
+  static draw_trace(a_, b_, c_) {}
+  static draw(x, ctx) {
+    [
+      { p: x.p, normal: { x: 0, y: 1 } },
+      { p: x.p, normal: { x: 1, y: 0 } },
+    ].map((c) => {
+      const p = window.data.particles[c.p];
+      const sliderLength = 40; // Length of the slider line
+      const angle = Math.atan2(c.normal.y, c.normal.x) + Math.PI / 2; // Angle of the slider line
+      ctx.beginPath();
+      ctx.moveTo(
+        p.x - sliderLength * Math.cos(angle),
+        p.y - sliderLength * Math.sin(angle),
+      );
+      ctx.lineTo(
+        p.x + sliderLength * Math.cos(angle),
+        p.y + sliderLength * Math.sin(angle),
+      );
+      ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
+      ctx.stroke();
     });
-  });
+  }
+}
+class ColinearUI {
+  static get_html(index) {
+    return `Roller Reference
+<select name="reference" onchange="updateConstraint(this, ${index}, 'reference')">
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].reference ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+Slide
+<select name="slide" onchange="updateConstraint(this, ${index}, 'slide')">
+
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].slide ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+Base
+<select name="base" onchange="updateConstraint(this, ${index}, 'base')">
+
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].base ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
+      window.data.constraints[index].oneway ? "checked" : ""
+    }></input>
+<button class=delete onclick="deleteConstraint('colinear', ${index})">X</button>
+`;
+  }
+  static make_constraint() {
+    var constraint = { reference: 0, slide: 1, base: 2 };
+    return constraint;
+  }
+  static draw_trace(a_, b_, c_) {}
+  static draw(c, ctx) {
+    const base = window.data.particles[c.base];
+    const reference = window.data.particles[c.reference];
+    const slider = window.data.particles[c.slide];
+    const length = Math.sqrt(
+      (base.x - reference.x) * (base.x - reference.x) +
+        (base.y - reference.y) * (base.y - reference.y),
+    );
+
+    const sx = (base.x - reference.x) / length;
+    const sy = (base.y - reference.y) / length;
+
+    const r = Math.abs(sx * (base.y - slider.y) - sy * (base.x - slider.x));
+    ctx.beginPath();
+    ctx.arc(slider.x, slider.y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = "grey";
+
+    ctx.stroke();
+  }
+}
+class F2kUI {
+  static get_html(index) {
+    return `F2k <label>Arm Tip
+<select name="reference" onchange="updateConstraint(this, ${index}, 'reference')">
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].reference ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+</label> <label>
+Roller 
+<select name="slide" onchange="updateConstraint(this, ${index}, 'slide')">
+
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].slide ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+</label> <label>
+Arm Base
+<select name="base" onchange="updateConstraint(this, ${index}, 'base')">
+
+${window.data.particles
+  .map((_, i) => i)
+  .map(
+    (i) =>
+      `<option value="${i}" ${
+        i === window.data.constraints[index].base ? "selected" : ""
+      }>P ${i + 1}</option>`,
+  )
+  .join("")}
+</select>
+</label> <label>
+One way
+<input type="checkbox" oninput="window.data.constraints[${index}].oneway=this.checked;updateUI()" ${
+      window.data.constraints[index].oneway ? "checked" : ""
+    }></input></label>
+<button class=delete onclick="deleteConstraint('f2k', ${index})">X</button>
+`;
+  }
+  static make_constraint() {
+    var constraint = { reference: 0, slide: 1, base: 2 };
+    return constraint;
+  }
+  static draw_trace(a_, b_, c_) {}
+  static draw(c, ctx) {
+    const base = window.data.particles[c.base];
+    const reference = window.data.particles[c.reference];
+    const slider = window.data.particles[c.slide];
+    const length = Math.sqrt(
+      (base.x - reference.x) * (base.x - reference.x) +
+        (base.y - reference.y) * (base.y - reference.y),
+    );
+
+    const sx = (base.x - reference.x) / length;
+    const sy = (base.y - reference.y) / length;
+
+    const r = Math.abs(sx * (base.y - slider.y) - sy * (base.x - slider.x));
+    ctx.beginPath();
+    ctx.arc(slider.x, slider.y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = "grey";
+
+    ctx.stroke();
+  }
+}
+const constraint_UI = {
+  rod: RodUI,
+  pin: PinUI,
+  slider: SliderUI,
+  colinear: ColinearUI,
+  f2k: F2kUI,
+  rope: RopeUI,
+  body: BodyUI,
+};
+
+for (var name in constraint_UI) {
+  const box = document.createElement("span");
+  var capsname = name[0].toUpperCase() + name.slice(1);
+
+  box.innerHTML = `<button onclick="createConstraint('${name}')">+ ${capsname}</button>`;
+
+  document.getElementById("addConstraintControl").appendChild(box);
 }
 
 async function doAnimate() {
@@ -105,7 +541,7 @@ async function doAnimate() {
     return;
   }
   var reset = JSON.stringify(window.data);
-  var [trajectories, constraintLog, forceLog] = simulate(
+  var [trajectories, constraintLog, _forceLog] = simulate(
     window.data.particles,
     window.data.constraints,
     window.data.timestep,
@@ -157,7 +593,7 @@ function terminate(state) {
   var vx = state[2 * window.data.projectile + 2 * window.data.particles.length];
   var vy =
     state[2 * window.data.projectile + 2 * window.data.particles.length + 1];
-  return vx > 100 && vy > 0;
+  return vx > 100 && vy > -vx;
 }
 function simulateAndRange() {
   var start = Date.now();
@@ -169,13 +605,7 @@ function simulateAndRange() {
     terminate,
   );
   window.constraintLog = constraintLog;
-  window.forceLog = forceLog
-  //var peakLoad = Math.max(
-  //  ...constraintLog[1]
-  //    .map(JSON.parse)
-  //    .map((y) => Math.max(...y.map((x) => Math.abs(x.force))))
-  //    .slice(1),
-  //);
+  window.forceLog = forceLog;
   var peakLoad = calculatePeakLoad(forceLog);
   var range = calculateRange(trajectories, window.data, constraintLog);
   var end = Date.now();
@@ -198,137 +628,33 @@ function drawMechanism() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   if (
     window.data.particles.length > 1 &&
-    window.data.constraints.rod.length + window.data.constraints.slider.length >
-      1 &&
     window.data.timestep > 0 &&
     typeof window.data.timestep === "number"
   ) {
-    var [trajectories, range, constraintLog, peakLoad] = simulateAndRange();
+    var [trajectories, range, _constraintLog, peakLoad] = simulateAndRange();
     document.getElementById("range").innerText = range.toFixed(1);
     document.getElementById("peakLoad").innerText = peakLoad.toFixed(1);
-    var t = 0;
-    var constraintI = 0;
     trajectories.forEach((trajectory) => {
-      while (constraintLog[0][constraintI + 1] < t) {
-        constraintI += 1;
-      }
-      t += window.data.timestep;
-      // Draw the trajectories for the rod constraints
-      for (let i = 0; i < window.data.constraints.rod.length; i++) {
-        if (!(window.data.constraints.rod[i].oneway == true)) {
-          const rod = window.data.constraints.rod[i];
-          const p1Index = rod.p1 * 2; // Index in trajectory array for p1.x and p1.y
-          const p2Index = rod.p2 * 2; // Index in trajectory array for p2.x and p2.y
-
-          // Draw the line for the rod's trajectory
-          ctx.beginPath();
-          ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
-          ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
-          ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
-          ctx.stroke();
-        }
-      }
-      for (let i = 0; i < window.data.constraints.rope.length; i++) {
-        if (!(window.data.constraints.rope[i].oneway == true)) {
-          const rope = window.data.constraints.rope[i];
-          const p1Index = rope.p1 * 2; // Index in trajectory array for p1.x and p1.y
-          const p3Index = rope.p3 * 2; // Index in trajectory array for p2.x and p2.y
-
-          // Draw the line for the rope's trajectory
-          ctx.beginPath();
-          ctx.moveTo(trajectory[p1Index], trajectory[p1Index + 1]);
-          for (var pulley of window.data.constraints.rope[i].pulleys) {
-            var p2Index = pulley.idx * 2;
-            ctx.lineTo(trajectory[p2Index], trajectory[p2Index + 1]);
-          }
-          ctx.lineTo(trajectory[p3Index], trajectory[p3Index + 1]);
-          ctx.strokeStyle = "rgba(255, 0, 0, 0.2)"; // Light red color
-          ctx.stroke();
-        }
+      for (let i = 0; i < window.data.constraints.length; i++) {
+        const constraint = window.data.constraints[i];
+        constraint_UI[constraint.name].draw_trace(constraint, trajectory, ctx);
       }
     });
 
     ctx.strokeStyle = "black";
-    //} catch {
-    //  ctx.fillText("Inconsistent Constraints (Duplicate Sliders?)", 300, 100);
-    //}
   }
 
   // Set a thicker line width for rods and sliders
   ctx.lineWidth = 3; // Increase the line width as desired
 
   // Draw rods
-  window.data.constraints.rod.forEach((c) => {
-    const p1 = window.data.particles[c.p1];
-    const p2 = window.data.particles[c.p2];
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
-    ctx.stroke();
+
+  var temp_constraints = window.data.constraints.slice();
+  temp_constraints.sort((a, b) => a.name > b.name);
+
+  temp_constraints.forEach((c) => {
+    constraint_UI[c.name].draw(c, ctx);
   });
-  window.data.constraints.rope.forEach((c) => {
-    const p1 = window.data.particles[c.p1];
-    const p3 = window.data.particles[c.p3];
-    ctx.setLineDash([8, 8]);
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    for (var pulley of c.pulleys) {
-      const p2 = window.data.particles[pulley.idx];
-      ctx.lineTo(p2.x, p2.y);
-    }
-    ctx.lineTo(p3.x, p3.y);
-    ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
-    ctx.stroke();
-    ctx.setLineDash([]);
-  });
-
-  // Draw sliders
-  window.data.constraints.slider
-    .concat(
-      window.data.constraints.pin.flatMap((x) => [
-        { p: x.p, normal: { x: 0, y: 1 } },
-        { p: x.p, normal: { x: 1, y: 0 } },
-      ]),
-    )
-    .forEach((c) => {
-      const p = window.data.particles[c.p];
-      const sliderLength = 40; // Length of the slider line
-      const angle = Math.atan2(c.normal.y, c.normal.x) + Math.PI / 2; // Angle of the slider line
-      ctx.beginPath();
-      ctx.moveTo(
-        p.x - sliderLength * Math.cos(angle),
-        p.y - sliderLength * Math.sin(angle),
-      );
-      ctx.lineTo(
-        p.x + sliderLength * Math.cos(angle),
-        p.y + sliderLength * Math.sin(angle),
-      );
-      ctx.strokeStyle = c.hovered ? "yellow" : "black"; // Change stroke style if hovered
-      ctx.stroke();
-    });
-
-  window.data.constraints.colinear
-    .concat(window.data.constraints.f2k)
-    .forEach((c) => {
-      const base = window.data.particles[c.base];
-      const reference = window.data.particles[c.reference];
-      const slider = window.data.particles[c.slider];
-      const length = Math.sqrt(
-        (base.x - reference.x) * (base.x - reference.x) +
-          (base.y - reference.y) * (base.y - reference.y),
-      );
-
-      const sx = (base.x - reference.x) / length;
-      const sy = (base.y - reference.y) / length;
-
-      const r = Math.abs(sx * (base.y - slider.y) - sy * (base.x - slider.x));
-      ctx.beginPath();
-      ctx.arc(slider.x, slider.y, r, 0, Math.PI * 2);
-      ctx.strokeStyle = "grey";
-
-      ctx.stroke();
-    });
 
   // Reset line width to default if needed elsewhere
   ctx.lineWidth = 1;
@@ -360,6 +686,8 @@ function drawMechanism() {
 function createParticle() {
   const particle = { x: 100, y: 100, mass: 1, hovered: false }; // Default values
   window.data.particles.push(particle);
+  draggedParticleIndex = window.data.particles.length - 1;
+  canvas.style.cursor = "move";
   updateUI();
 }
 
@@ -370,31 +698,20 @@ function updateParticle(index, property, value) {
 
 function deleteParticle(index) {
   window.data.particles.splice(index, 1);
-  for (var type1 in window.data.constraints) {
-    var type = window.data.constraints[type1];
-    var done = false;
-    while (!done) {
-      done = true;
-      for (var i = 0; i < type.length; i++) {
-        var constraint = type[i];
-        var present = false;
-        for (var name of [
-          "p",
-          "p1",
-          "p2",
-          "p3",
-          "reference",
-          "base",
-          "slider",
-        ]) {
-          if (constraint[name] === index) {
-            present = true;
-          }
+  var done = false;
+  while (!done) {
+    done = true;
+    for (var i = 0; i < window.data.constraints.length; i++) {
+      var constraint = window.data.constraints[i];
+      var present = false;
+      for (var name of ["p", "p1", "p2", "p3", "reference", "base", "slide"]) {
+        if (constraint[name] === index) {
+          present = true;
         }
-        if (present) {
-          done = false;
-          type.splice(i, 1);
-        }
+      }
+      if (present) {
+        done = false;
+        window.data.constraints.splice(i, 1);
       }
     }
   }
@@ -407,88 +724,39 @@ function deleteParticle(index) {
   updateUI();
 }
 function createConstraint(type) {
-  let constraint = {};
-
-  // Depending on the type, create a different constraint
-  if (type === "rod") {
-    if (window.data.particles.length < 2) {
-      alert("At least two particles are required to create a rod constraint.");
-      return;
-    }
-    var indices = [];
-    for (let i = window.data.particles.length - 1; i >= 0; i--) {
-      for (let j = window.data.particles.length - 1; j >= 0; j--) {
-        if (!constraintExists(i, j)) {
-          indices.push([i, j]);
-        }
-      }
-    }
-    constraint = { p1: indices[0][0], p2: indices[0][1], hovered: false }; // Default to the first two window.data.particles
-    window.data.constraints.rod.push(constraint);
-  } else if (type === "slider") {
-    if (window.data.particles.length < 1) {
-      alert("At least one particle is required to create a slider constraint.");
-      return;
-    }
-    var sliders = window.data.constraints.slider;
-    var lastParticle = window.data.particles.length - 1;
-    if (
-      sliders.length > 0 &&
-      sliders[sliders.length - 1].p == lastParticle &&
-      sliders[sliders.length - 1].normal.x == 0 &&
-      sliders[sliders.length - 1].normal.y == 1
-    ) {
-      constraint = { p: lastParticle, normal: { x: 1, y: 0 }, hovered: false }; // Default to the first particle and a vertical normal
-    } else {
-      constraint = { p: lastParticle, normal: { x: 0, y: 1 }, hovered: false }; // Default to the first particle and a vertical normal
-    }
-    window.data.constraints.slider.push(constraint);
-  } else if (type === "colinear") {
-    constraint = { reference: 0, slider: 1, base: 2 };
-    window.data.constraints.colinear.push(constraint);
-  } else if (type === "pin") {
-    constraint = { p: window.data.particles.length - 1 };
-    window.data.constraints.pin.push(constraint);
-  } else if (type === "f2k") {
-    constraint = { reference: 0, slider: 1, base: 2 };
-    window.data.constraints.f2k.push(constraint);
-  } else if (type === "rope") {
-    constraint = { p1: 0, pulleys: [], p3: 2 };
-    window.data.constraints.rope.push(constraint);
-  } else {
-    console.error("Unknown constraint type:", type);
-    return;
-  }
+  var constraint = constraint_UI[type].make_constraint();
+  constraint.name = type;
+  window.data.constraints.push(constraint);
   updateUI();
 }
 function updatePulley(element, index, pulleyindex) {
   const value = +element.value;
-  const constraint = window.data.constraints.rope[index];
+  const constraint = window.data.constraints[index];
   constraint.pulleys[pulleyindex].idx = value;
   updateUI();
 }
 function updatePulleyDirection(element, index, pulleyindex) {
   const value = element.value;
-  const constraint = window.data.constraints.rope[index];
+  const constraint = window.data.constraints[index];
   constraint.pulleys[pulleyindex].wrapping = value;
   updateUI();
 }
 function removePulley(index) {
-  window.data.constraints.rope[index].pulleys.pop();
+  window.data.constraints[index].pulleys.pop();
   updateUI();
 }
 function addPulley(index) {
-  window.data.constraints.rope[index].pulleys.push({
+  window.data.constraints[index].pulleys.push({
     idx: 0,
     wrapping: "both",
   });
   updateUI();
 }
-function updateConstraint(element, type, index, property) {
+function updateConstraint(element, index, property) {
   const value = property.includes("normal")
     ? parseFloat(element.value)
     : parseInt(element.value);
-  const constraint = window.data.constraints[type][index];
+  const constraint = window.data.constraints[index];
 
   if (property === "p1" || property === "p2" || property === "p") {
     constraint[property] = value;
@@ -502,14 +770,13 @@ function updateConstraint(element, type, index, property) {
   }
 }
 
-function deleteConstraint(type, index) {
-  window.data.constraints[type].splice(index, 1);
+function deleteConstraint(_name, index) {
+  window.data.constraints.splice(index, 1);
   updateUI();
 }
 
 function resizeCanvas() {
   var wwidth = Math.min(window.screen.width, window.innerWidth);
-  console.log(wwidth);
 
   if (wwidth > 1040) {
     wwidth -= 440;
@@ -558,11 +825,9 @@ function updateUI() {
     constraintsControl.removeChild(constraintsControl.lastChild);
   }
   // Re-create constraint control boxes
-  for (var ctype of ctypes) {
-    window.data.constraints[ctype].forEach((_, index) =>
-      createConstraintControlBox(ctype, index),
-    );
-  }
+  window.data.constraints.forEach((_, index) =>
+    createConstraintControlBox(index),
+  );
   const presetsbox = document.getElementById("presets");
   while (presetsbox.children.length > 0) {
     presetsbox.removeChild(presetsbox.lastChild);
@@ -594,8 +859,7 @@ function updateUI() {
 }
 function loadPreset(element) {
   window.data = JSON.parse(presets[element.value]);
-  fillEmptyConstraints(window.data);
-  normalizeSize()
+  normalizeSize();
 }
 
 window.normalizeSize = normalizeSize;
@@ -648,27 +912,21 @@ function createParticleControlBox(index) {
   const box = document.createElement("div");
   box.className = "control-box";
   box.innerHTML = `
-                P ${
-                  1 + index
-                } <label>Mass <input type="text" min="1" max="500" value="${
-                  window.data.particles[index].mass
-                }" oninput="updateParticle(${index}, 'mass', this.value)"></label>
-                <label>X <input type="text" min="0" max="${
-                  canvas.width
-                }" value="${
-                  window.data.particles[index].x
-                }" oninput="updateParticle(${index}, 'x', this.value)"></label>
-                <label>Y <input type="text" min="0" max="${
-                  canvas.height
-                }" value="${
-                  window.data.particles[index].y
-                }" oninput="updateParticle(${index}, 'y', this.value)"></label>
-                ${
-                  index == data.particles.length - 1
-                    ? `<button class=delete onclick="deleteParticle(${index})">X</button>`
-                    : ``
-                }
-              `;
+			P ${1 + index} <label>Mass <input type="text" min="1" max="500" value="${
+        window.data.particles[index].mass
+      }" oninput="updateParticle(${index}, 'mass', this.value)"></label>
+			<label>X <input type="text" min="0" max="${canvas.width}" value="${
+        window.data.particles[index].x
+      }" oninput="updateParticle(${index}, 'x', this.value)"></label>
+			<label>Y <input type="text" min="0" max="${canvas.height}" value="${
+        window.data.particles[index].y
+      }" oninput="updateParticle(${index}, 'y', this.value)"></label>
+			${
+        index == data.particles.length - 1
+          ? `<button class=delete onclick="deleteParticle(${index})">X</button>`
+          : ``
+      }
+		      `;
   box.addEventListener("mouseenter", () => {
     window.data.particles[index].hovered = true;
     drawMechanism();
@@ -683,296 +941,35 @@ function constraintExists(p1, p2) {
   if (p1 == p2) {
     return true;
   }
-  for (var rod of window.data.constraints.rod) {
-    if (
-      (rod.p1 == p1 && rod.p2 == p2) ||
-      (rod.p1 == p2 && rod.p2 == p1) ||
-      p1 == p2
-    ) {
-      return true;
+  for (var rod of window.data.constraints) {
+    if (rod.name === "rod") {
+      if (
+        (rod.p1 == p1 && rod.p2 == p2) ||
+        (rod.p1 == p2 && rod.p2 == p1) ||
+        p1 == p2
+      ) {
+        return true;
+      }
     }
   }
   return false;
 }
 
-function createConstraintControlBox(type, index) {
+function createConstraintControlBox(index) {
   const box = document.createElement("div");
   box.className = "control-box";
+  const type = window.data.constraints[index].name;
   box.dataset.type = type;
   box.dataset.index = index;
 
-  if (type === "rod") {
-    box.innerHTML = `Rod
-                    <select name="p1" onchange="updateConstraint(this, 'rod', ${index}, 'p1')">
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .filter(
-                     (i) =>
-                       !constraintExists(
-                         window.data.constraints.rod[index].p2,
-                         i,
-                       ) || i == window.data.constraints.rod[index].p1,
-                   )
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.rod[index].p1
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-                    <select name="p2" onchange="updateConstraint(this, 'rod', ${index}, 'p2')">
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .filter(
-                     (i) =>
-                       !constraintExists(
-                         window.data.constraints.rod[index].p1,
-                         i,
-                       ) || i == window.data.constraints.rod[index].p2,
-                   )
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.rod[index].p2
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    One way
-            			<input type="checkbox" oninput="window.data.constraints.rod[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints.rod[index].oneway ? "checked" : ""
-                  }></input>
-                  <button class=delete onclick="deleteConstraint('rod', ${index})">X</button>
-                `;
-  } else if (type === "slider") {
-    const slider = window.data.constraints.slider[index];
-    box.innerHTML = `
-                  <label>
-            		Slider
-                    <select name="p" onchange="updateConstraint(this, 'slider', ${index}, 'p')">
-                      ${window.data.particles
-                        .map(
-                          (_, i) =>
-                            `<option value="${i}" ${
-                              i === slider.p ? "selected" : ""
-                            }>P ${i + 1}</option>`,
-                        )
-                        .join("")}
-                    </select>
-                  </label>
-                  <label>Normal X <input type="range" name="normalX" min="-1" max="1" step="0.1" value="${
-                    slider.normal.x
-                  }" oninput="updateConstraint(this, 'slider', ${index}, 'normalX')"></label>
-                  <label>Normal Y <input type="range" name="normalY" min="-1" max="1" step="0.1" value="${
-                    slider.normal.y
-                  }" oninput="updateConstraint(this, 'slider', ${index}, 'normalY')"></label>
-		  One way
-            			<input type="checkbox" oninput="window.data.constraints.slider[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints.slider[index].oneway
-                      ? "checked"
-                      : ""
-                  }></input>
-                  <button class=delete onclick="deleteConstraint('slider', ${index})">X</button>
-                `;
-  } else if (type === "colinear") {
-    box.innerHTML = `Roller Track1
-                    <select name="reference" onchange="updateConstraint(this, 'colinear', ${index}, 'reference')">
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.colinear[index].reference
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    Slide
-                    <select name="slider" onchange="updateConstraint(this, 'colinear', ${index}, 'slider')">
-
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.colinear[index].slider
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    Track2
-                    <select name="base" onchange="updateConstraint(this, 'colinear', ${index}, 'base')">
-
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.colinear[index].base
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-            			<input type="checkbox" oninput="window.data.constraints.colinear[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints.colinear[index].oneway
-                      ? "checked"
-                      : ""
-                  }></input>
-                  <button class=delete onclick="deleteConstraint('colinear', ${index})">X</button>
-                `;
-  } else if (type === "pin") {
-    box.innerHTML = `Pin <select onchange="updateConstraint(this, 'pin', ${index}, 'p')">${window.data.particles
-      .map(
-        (_, i) =>
-          `<option value="${i}" ${
-            i === window.data.constraints.pin[index].p ? "selected" : ""
-          }>P ${i + 1}</option>`,
-      )
-      .join("")}</select>
-
-                  <button class=delete onclick="deleteConstraint('pin', ${index})">X</button>
-		  `;
-  } else if (type === "f2k") {
-    box.innerHTML = `F2k <label>Arm Tip
-                    <select name="reference" onchange="updateConstraint(this, 'f2k', ${index}, 'reference')">
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.f2k[index].reference
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    </label> <label>
-		    Roller 
-                    <select name="slider" onchange="updateConstraint(this, 'f2k', ${index}, 'slider')">
-
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.f2k[index].slider
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    </label> <label>
-		    Arm Base
-                    <select name="base" onchange="updateConstraint(this, 'f2k', ${index}, 'base')">
-
-            	   ${window.data.particles
-                   .map((_, i) => i)
-                   .map(
-                     (i) =>
-                       `<option value="${i}" ${
-                         i === window.data.constraints.f2k[index].base
-                           ? "selected"
-                           : ""
-                       }>P ${i + 1}</option>`,
-                   )
-                   .join("")}
-                    </select>
-		    </label> <label>
-		    One way
-            			<input type="checkbox" oninput="window.data.constraints.f2k[${index}].oneway=this.checked;updateUI()" ${
-                    window.data.constraints.f2k[index].oneway ? "checked" : ""
-                  }></input></label>
-                  <button class=delete onclick="deleteConstraint('f2k', ${index})">X</button>
-                `;
-  } else if (type === "rope") {
-    box.innerHTML = `
-				Rope and pulley.
-				<label>
-				Fixed end:
-				<select name="p1" onchange="updateConstraint(this, 'rope', ${index}, 'p1')">
-								${window.data.particles
-                  .map((_, i) => i)
-                  .map(
-                    (i) =>
-                      `<option value="${i}" ${
-                        i === window.data.constraints.rope[index].p1
-                          ? "selected"
-                          : ""
-                      }>P ${i + 1}</option>`,
-                  )
-                  .join("")}
-				</select></label>
-${window.data.constraints.rope[index].pulleys
-  .map(
-    (pulley, j) => `
-<label>Pulley
-<select name="p2" onchange="updatePulley(this, ${index}, ${j})">
-
-${window.data.particles
-  .map((_, i) => i)
-  .map(
-    (i) =>
-      `<option value="${i}" ${i === pulley.idx ? "selected" : ""}>P ${
-        i + 1
-      }</option>`,
-  )
-  .join("")}
-</select>
-<select onchange="updatePulleyDirection(this, ${index}, ${j})">
-${["both", "cw", "ccw", "cw_drop", "ccw_drop"]
-  .map(
-    (str) =>
-      `<option value=${str} ${
-        str == pulley.wrapping ? "selected" : ""
-      }>${str}</option>`,
-  )
-  .join("")}
-</select></label>
-`,
-  )
-  .join("")}
-<button onclick="addPulley(${index})">+</button>
-<button onclick="removePulley(${index})">-</button>
-<label>Fixed end
-<select name="p3" onchange="updateConstraint(this, 'rope', ${index}, 'p3')">
-
-${window.data.particles
-  .map((_, i) => i)
-  .map(
-    (i) =>
-      `<option value="${i}" ${
-        i === window.data.constraints.rope[index].p3 ? "selected" : ""
-      }>P ${i + 1}</option>`,
-  )
-  .join("")}
-</select>
-</label>
-<button class=delete onclick="deleteConstraint('rope', ${index})">X</button>
-<input type="checkbox" oninput="window.data.constraints.rope[${index}].oneway=this.checked;updateUI()" ${
-      window.data.constraints.rope[index].oneway ? "checked" : ""
-    }></input>
-`;
-  }
+  box.innerHTML = constraint_UI[type].get_html(index);
 
   box.addEventListener("mouseenter", () => {
-    window.data.constraints[type][index].hovered = true;
+    window.data.constraints[index].hovered = true;
     drawMechanism();
   });
   box.addEventListener("mouseleave", () => {
-    window.data.constraints[type][index].hovered = false;
+    window.data.constraints[index].hovered = false;
     drawMechanism();
   });
   document.getElementById("constraintsControl").appendChild(box);
@@ -997,7 +994,6 @@ function getParticleAtPosition(x, y) {
   return result;
 }
 
-// Set up the event listeners on the canvas
 canvas.addEventListener("mousedown", function (event) {
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width; // relationship bitmap vs. element for X
@@ -1055,7 +1051,6 @@ function loadMechanism() {
   const savedData = localStorage.getItem("mechanismData");
   if (savedData) {
     window.data = JSON.parse(savedData);
-    fillEmptyConstraints(window.data);
     try {
       updateUI();
     } catch {
@@ -1075,7 +1070,6 @@ window.onload = () => {
     cache: "no-store",
     mode: "no-cors",
   });
-  //doit();
   //optimize();
   //	setTimeout(optimize, 1000);
 };
@@ -1089,78 +1083,74 @@ async function optimizeRange2() {
   document.getElementById("optimize").innerText = "Stop";
   optimizingRange2 = true;
   //wait();
-  var step = .1;
+  var step = 0.1;
   var timer = 0;
   function pullconfig() {
-	  var config = []
+    var config = [];
     for (var p of window.data.particles.slice(1)) {
-        if (p.x % 10 != 0) {
-          config.push(p.x)
-        }
-        if (p.y % 10 != 0) {
-	  config.push(p.y)
-        }
-          if (p.mass % 1 != 0) {
-		  config.push(p.mass)
-          }
+      if (p.x % 10 != 0) {
+        config.push(p.x);
+      }
+      if (p.y % 10 != 0) {
+        config.push(p.y);
+      }
+      if (p.mass % 1 != 0) {
+        config.push(p.mass);
+      }
     }
-    return config
+    return config;
   }
   function pushconfig(config) {
-	  var i = 0;
+    var i = 0;
     for (var p of window.data.particles.slice(1)) {
-        if (p.x % 10 != 0) {
-	  p.x = config[i]
-	  i += 1;
-        }
-        if (p.y % 10 != 0) {
-		p.y = config[i]
-		i += 1
-        }
+      if (p.x % 10 != 0) {
+        p.x = config[i];
+        i += 1;
+      }
+      if (p.y % 10 != 0) {
+        p.y = config[i];
+        i += 1;
+      }
 
-          if (p.mass % 1 != 0) {
-		  p.mass = Math.abs(config[i])
-		  i += 1
-          }
+      if (p.mass % 1 != 0) {
+        p.mass = Math.abs(config[i]);
+        i += 1;
+      }
     }
-    return config
+    return config;
   }
-  var z = pullconfig()
+  var z = pullconfig();
   function q(config) {
-	  pushconfig(config)
-          var [_, range, _, _oad] = simulateAndRange();
-	  return range
+    pushconfig(config);
+    var [_, range, _, _oad] = simulateAndRange();
+    return range;
   }
-  var topz = []
+  var topz = [];
   var newz;
 
-  var population_size = 25 * z.length
+  var population_size = 25 * z.length;
   while (optimizingRange2) {
-
-
     if (timer > population_size) {
-      topz = topz.slice(0, population_size)
-      var population = topz.map((pair) => pair[1])
+      topz = topz.slice(0, population_size);
+      var population = topz.map((pair) => pair[1]);
 
-      var mean = calculateMean(population)
-      var covariance = calculateCovariance(population, mean)
-      //console.log(covariance)
-      var L = choleskyDecomposition(covariance)
-      newz = sampleGaussian(z, L)
+      var mean = calculateMean(population);
+      var covariance = calculateCovariance(population, mean);
+      var L = choleskyDecomposition(covariance);
+      newz = sampleGaussian(z, L);
       //optimizingRange2 = false
     } else {
-      newz = z.map((el) => el + randn() * step)
+      newz = z.map((el) => el + randn() * step);
     }
-    var zscore = q(newz)
-    timer += 1
-    topz.push([zscore, newz])
+    var zscore = q(newz);
+    timer += 1;
+    topz.push([zscore, newz]);
     if (timer % 15 == 1 || zscore > topz[0][0]) {
-
       drawMechanism();
       await wait();
     }
-    topz = topz.sort((a, b) => b[0] - a[0])
-    z = topz[0][1]
+    topz = topz.sort((a, b) => b[0] - a[0]);
+    z = topz[0][1];
   }
   pushconfig(z);
   drawMechanism();
@@ -1190,7 +1180,9 @@ async function optimizeRange() {
           p.y = p.y + step * (0.5 - Math.random());
         } else {
           if (p.mass % 1 != 0) {
-            p.mass = Math.abs(p.mass + p.mass * 0.01 * step * (0.5 - Math.random()));
+            p.mass = Math.abs(
+              p.mass + p.mass * 0.01 * step * (0.5 - Math.random()),
+            );
           }
         }
       }
@@ -1232,82 +1224,79 @@ async function gentlify() {
   document.getElementById("gentlify").innerText = "Stop";
   gentlifying = true;
   //wait();
-  var step = .6;
+  var step = 0.6;
   var timer = 0;
   function pullconfig() {
-	  var config = []
+    var config = [];
     for (var p of window.data.particles.slice(1)) {
-        if (p.x % 10 != 0) {
-          config.push(p.x)
-        }
-        if (p.y % 10 != 0) {
-	  config.push(p.y)
-        }
-          if (p.mass % 1 != 0) {
-		  config.push(p.mass)
-          }
+      if (p.x % 10 != 0) {
+        config.push(p.x);
+      }
+      if (p.y % 10 != 0) {
+        config.push(p.y);
+      }
+      if (p.mass % 1 != 0) {
+        config.push(p.mass);
+      }
     }
-    return config
+    return config;
   }
   function pushconfig(config) {
-	  var i = 0;
+    var i = 0;
     for (var p of window.data.particles.slice(1)) {
-        if (p.x % 10 != 0) {
-	  p.x = config[i]
-	  i += 1;
-        }
-        if (p.y % 10 != 0) {
-		p.y = config[i]
-		i += 1
-        }
+      if (p.x % 10 != 0) {
+        p.x = config[i];
+        i += 1;
+      }
+      if (p.y % 10 != 0) {
+        p.y = config[i];
+        i += 1;
+      }
 
-          if (p.mass % 1 != 0) {
-		  p.mass = Math.abs(config[i])
-		  i += 1
-          }
+      if (p.mass % 1 != 0) {
+        p.mass = Math.abs(config[i]);
+        i += 1;
+      }
     }
-    return config
+    return config;
   }
-  var z = pullconfig()
+  var z = pullconfig();
   function q(config) {
-	  pushconfig(config)
-          var [_, range, _, load] = simulateAndRange();
-    if ( range < oldrange) {
-      return -9999999999999999.
+    pushconfig(config);
+    var [_, range, _, load] = simulateAndRange();
+    if (range < oldrange) {
+      return -9999999999999999;
     }
-	  return -load
+    return -load;
   }
-  var topz = []
+  var topz = [];
   var newz;
 
-  var population_size = 25 * z.length
+  var population_size = 25 * z.length;
   var oldrange = +document.getElementById("range").innerText;
   while (gentlifying) {
-
-
     if (timer > population_size) {
-      topz = topz.slice(0, population_size)
-      var population = topz.map((pair) => pair[1])
+      topz = topz.slice(0, population_size);
+      var population = topz.map((pair) => pair[1]);
 
-      var mean = calculateMean(population)
-      var covariance = calculateCovariance(population, mean)
+      var mean = calculateMean(population);
+      var covariance = calculateCovariance(population, mean);
       //console.log(covariance)
-      var L = choleskyDecomposition(covariance)
-      newz = sampleGaussian(z, L)
+      var L = choleskyDecomposition(covariance);
+      newz = sampleGaussian(z, L);
       //optimizingRange2 = false
     } else {
-      newz = z.map((el) => el + randn() * step)
+      newz = z.map((el) => el + randn() * step);
     }
-    var zscore = q(newz)
-    timer += 1
-    topz.push([zscore, newz])
+    var zscore = q(newz);
+    timer += 1;
+    topz.push([zscore, newz]);
     if (zscore > topz[Math.max(0, topz.length - 2)][0]) {
-      
       drawMechanism();
       await wait();
     }
-    topz = topz.sort((a, b) => b[0] - a[0])
-    z = topz[0][1]
+    topz = topz.sort((a, b) => b[0] - a[0]);
+    z = topz[0][1];
   }
   drawMechanism();
 }
@@ -1323,7 +1312,7 @@ async function optimize() {
   //wait();
   var optTimeout = 500;
   var timer = optTimeout;
-  var step = 3;
+  var step = 0.06;
   var oldrange = +document.getElementById("range").innerText;
   var oldload = +document.getElementById("peakLoad").innerText;
   while (optimizing) {
@@ -1406,7 +1395,6 @@ function load() {
     reader.onload = (readerEvent) => {
       try {
         window.data = JSON.parse(readerEvent.target.result);
-        fillEmptyConstraints(window.data);
         updateUI();
       } catch (error) {
         alert("Error parsing JSON!");
@@ -1446,4 +1434,3 @@ window.updatePulleyDirection = updatePulleyDirection;
 window.addPulley = addPulley;
 window.removePulley = removePulley;
 window.waitForAnimationFrame = waitForAnimationFrame;
-window.doit = doit;
