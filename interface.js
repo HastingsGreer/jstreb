@@ -977,6 +977,34 @@ function createConstraintControlBox(index) {
 // Global variable to track the currently dragged particle, if any
 let draggedParticleIndex = null;
 
+canvas.addEventListener("touchstart", function (e) {
+  var touch = e.touches[0];
+  var mouseEvent = new MouseEvent("mousedown", {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+  });
+  canvas.dispatchEvent(mouseEvent);
+}, { passive: true });
+canvas.addEventListener("touchend", function (_) {
+  var mouseEvent = new MouseEvent("mouseup", {});
+  canvas.dispatchEvent(mouseEvent);
+});
+canvas.addEventListener("touchmove", function (e) {
+  if (e.touches.length > 1) {
+    return;
+  }
+  if (draggedParticleIndex === null) {
+    return;
+  }
+  e.preventDefault();
+  var touch = e.touches[0];
+  var mouseEvent = new MouseEvent("mousemove", {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+  });
+  canvas.dispatchEvent(mouseEvent);
+}, { passive: false });
+
 // Function to check if a mouse position is over a particle
 function getParticleAtPosition(x, y) {
   var result = window.data.particles.findIndex((p) => {
